@@ -6,6 +6,7 @@ paginate = 8
 enableInlineShortcodes = true
 footnoteReturnLinkContents = "^"
 theme = "origin"
+publishDir = "docs"
 
 [params]
   description = ""
