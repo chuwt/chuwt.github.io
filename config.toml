@@ -1,0 +1,50 @@
+baseURL = "http://chuwt.github.io"
+title = "Chuwt's Blog"
+author = "Chuwt"
+copyright = "© 2021, Chuwt"
+paginate = 8
+enableInlineShortcodes = true
+footnoteReturnLinkContents = "^"
+theme = "origin"
+
+[params]
+  description = ""
+  cssonly = false
+
+  [params.socials]
+  facebook = ""
+  twitter = ""
+  instagram = ""
+  youtube = ""
+  github = "https://github.com/chuwt"
+  gitlab = ""
+  linkedin = ""
+  slack = ""
+  stackoverflow = ""
+  medium= ""
+[menu]
+  [[menu.main]]
+    identifier = "home"
+    name = "Home"
+    url = "/"
+    weight = 10
+
+  [[menu.main]]
+    identifier = "about"
+    name = "About"
+    url = "/about"
+    weight = 10
+
+
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+  series = "series"
+
+[markup]
+  [markup.highlight]
+    style = "github"
+    tabWidth = 4
+
+[markup.goldmark.renderer]
+unsafe = true
