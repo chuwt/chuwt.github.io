@@ -8,7 +8,7 @@
     <meta property="og:title" content="{{ if not .IsHome }}{{with .Title }}{{ . }}{{ end }}{{else}}{{ .Site.Title }}{{end}}" />
     <meta property="og:description" content="{{if .IsHome}}{{ .Site.Params.description }}{{else}}{{.Description}}{{end}}" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="{{.Page.Permalink}}" />
+    <meta property="og:url" content="{{.Page.RelPermalink}}" />
     <meta itemprop="name" content="{{ if not .IsHome }}{{with .Title }}{{ . }}{{ end }}{{else}}{{ .Site.Title }}{{end}}">
     <meta itemprop="description" content="{{if .IsHome}}{{ .Site.Params.description }}{{else}}{{.Description}}{{end}}">
     <meta name="twitter:card" content="summary"/>
@@ -19,5 +19,5 @@
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 
     {{ $style := resources.Get "scss/style.scss" | resources.ToCSS | resources.Minify | resources.Fingerprint }}
-    <link rel="stylesheet" href="{{$style.Permalink}}" >
+    <link rel="stylesheet" href="{{$style.RelPermalink}}" >
 </head>

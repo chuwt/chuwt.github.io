@@ -1,4 +1,4 @@
-baseURL = "http://chuwt.github.io"
+baseURL = "https://chuwt.github.io"
 title = "Chuwt's Blog"
 author = "Chuwt"
 copyright = "© 2021, Chuwt"
@@ -48,4 +48,4 @@ publishDir = "docs"
     tabWidth = 4
 
 [markup.goldmark.renderer]
-unsafe = true
+#unsafe = true
