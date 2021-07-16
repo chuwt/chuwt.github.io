@@ -62,111 +62,111 @@ type Kevent_t struct {
 
 ```go
 func NetworkNIO() {
-	// 创建一个socket
-	listener, _ := net.Listen("unix", "./chuwt.socket")
-	defer listener.Close()
+    // 创建一个socket
+    listener, _ := net.Listen("unix", "./chuwt.socket")
+    defer listener.Close()
 
-	var fd int
+    var fd int
 
-	// 获取此socket的FD
-	f, err := listener.(*net.UnixListener).File()
-	if err != nil {
-		log.Println("get listener fd error", err)
-		return
-	}
-	fd = int(f.Fd())
-	// 设置FD为非阻塞
-	_ = syscall.SetNonblock(fd, true)
+    // 获取此socket的FD
+    f, err := listener.(*net.UnixListener).File()
+    if err != nil {
+        log.Println("get listener fd error", err)
+        return
+    }
+    fd = int(f.Fd())
+    // 设置FD为非阻塞
+    _ = syscall.SetNonblock(fd, true)
 
-	// 创建一个Kqueue
-	kqFd, err := syscall.Kqueue()
-	if err != nil {
-		log.Println("create kqueue error", err)
-		return
-	}
-	// 注册socket的读事件
-	_, err = syscall.Kevent(kqFd, []syscall.Kevent_t{
-		{
-			Ident:  uint64(fd),
-			Filter: syscall.EVFILT_READ, // 读就绪触发
-			Flags: syscall.EV_ADD | // 添加
-				syscall.EV_CLEAR, // 当触发后，events会清空
-		},
-	}, nil, nil)
-	if err != nil {
-		log.Println("create kqueue error", err)
-		return
-	}
-	events := make([]syscall.Kevent_t, 100)
-	for {
-		n, err := syscall.Kevent(kqFd, nil, events, nil)
-		if err != nil && err != syscall.EINTR {
-			log.Println("an error occurred", err)
-			return
-		}
-		for i := 0; i < n; i++ {
-			event := events[i]
-			eventFd := int(event.Ident)
-			if event.Flags | syscall.EV_EOF == event.Flags {
-				// 退出了
-				_ = syscall.Close(eventFd)
-				// 移除
-				_, _ = syscall.Kevent(kqFd, []syscall.Kevent_t{
-					{
-						Ident:  uint64(eventFd),
-						Flags:  syscall.EV_DELETE,
-						Filter: syscall.EVFILT_READ, // 监听读
-					},
-				}, nil, nil)
-				log.Println("连接", eventFd, "退出")
-				continue
-			}
-			if eventFd == fd {
-				// socket的文件描述符
-				connFd, _, err := syscall.Accept(eventFd)
-				if err != nil {
-					if err == syscall.EAGAIN {
-						continue
-					} else {
-						_ = syscall.Close(connFd)
-					}
-					continue
-				}
-				log.Println("收到连接请求:", connFd)
-				_ = syscall.SetNonblock(connFd, true)
-				// 将新连接加入到监听中
-				// 这里只注册读事件，可以注册写事件
-				_, err = syscall.Kevent(kqFd, []syscall.Kevent_t{
-					{
-						Ident:  uint64(connFd),
-						Flags:  syscall.EV_ADD,
-						Filter: syscall.EVFILT_READ, // 监听读
-					},
-				}, nil, nil)
-				if err != nil {
-					_ = syscall.Close(connFd)
-				}
+    // 创建一个Kqueue
+    kqFd, err := syscall.Kqueue()
+    if err != nil {
+        log.Println("create kqueue error", err)
+        return
+    }
+    // 注册socket的读事件
+    _, err = syscall.Kevent(kqFd, []syscall.Kevent_t{
+        {
+            Ident:  uint64(fd),
+            Filter: syscall.EVFILT_READ, // 读就绪触发
+            Flags: syscall.EV_ADD | // 添加
+                syscall.EV_CLEAR, // 当触发后，events会清空
+        },
+    }, nil, nil)
+    if err != nil {
+        log.Println("create kqueue error", err)
+        return
+    }
+    events := make([]syscall.Kevent_t, 100)
+    for {
+        n, err := syscall.Kevent(kqFd, nil, events, nil)
+        if err != nil && err != syscall.EINTR {
+            log.Println("an error occurred", err)
+            return
+        }
+        for i := 0; i < n; i++ {
+            event := events[i]
+            eventFd := int(event.Ident)
+            if event.Flags | syscall.EV_EOF == event.Flags {
+                // 退出了
+                _ = syscall.Close(eventFd)
+                // 移除
+                _, _ = syscall.Kevent(kqFd, []syscall.Kevent_t{
+                    {
+                        Ident:  uint64(eventFd),
+                        Flags:  syscall.EV_DELETE,
+                        Filter: syscall.EVFILT_READ, // 监听读
+                    },
+                }, nil, nil)
+                log.Println("连接", eventFd, "退出")
+                continue
+            }
+            if eventFd == fd {
+                // socket的文件描述符
+                connFd, _, err := syscall.Accept(eventFd)
+                if err != nil {
+                    if err == syscall.EAGAIN {
+                        continue
+                    } else {
+                        _ = syscall.Close(connFd)
+                    }
+                    continue
+                }
+                log.Println("收到连接请求:", connFd)
+                _ = syscall.SetNonblock(connFd, true)
+                // 将新连接加入到监听中
+                // 这里只注册读事件，可以注册写事件
+                _, err = syscall.Kevent(kqFd, []syscall.Kevent_t{
+                    {
+                        Ident:  uint64(connFd),
+                        Flags:  syscall.EV_ADD,
+                        Filter: syscall.EVFILT_READ, // 监听读
+                    },
+                }, nil, nil)
+                if err != nil {
+                    _ = syscall.Close(connFd)
+                }
 
-			} else {
-				// 连接的fd就绪了
-				// 创建一个buf进行读取
-				buf := make([]byte, 100)
-				// 读
-				rn, err := syscall.Read(eventFd, buf)
-				if err != nil {
-					if err == syscall.EAGAIN {
-						continue
-					} else {
-						log.Println("read error:", err)
-						continue
-					}
-				} else if rn == 0 {
+            } else {
+                // 连接的fd就绪了
+                // 创建一个buf进行读取
+                buf := make([]byte, 100)
+                // 读
+                rn, err := syscall.Read(eventFd, buf)
+                if err != nil {
+                    if err == syscall.EAGAIN {
+                        continue
+                    } else {
+                        log.Println("read error:", err)
+                        continue
+                    }
+                } else if rn == 0 {
 
-				}
-				fmt.Println("收到:", eventFd, "的信息:", string(buf))
-			}
-		}
-	}
+                }
+                fmt.Println("收到:", eventFd, "的信息:", string(buf))
+            }
+        }
+    }
 }
 ```
 

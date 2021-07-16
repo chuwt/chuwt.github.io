@@ -44,11 +44,11 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://chuwt.github.io/post/nio-kqueue/" />
 <meta property="article:published_time" content="2021-07-16T00:00:00+00:00" />
-<meta property="article:modified_time" content="2021-07-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-07-16T17:39:51+08:00" />
 <meta itemprop="name" content="NIO-Kqueue">
 <meta itemprop="description" content="关键字 Kqueue Kevent Kevent_t Kqueue 创建一个kqueue监听队列，返回的是kq的文件描述符 1 kq, err := syscall.Kqueue() Kevent 监听方法，kq监听changes里注册的事件，将触发的事件放">
 <meta itemprop="datePublished" content="2021-07-16T00:00:00&#43;00:00" />
-<meta itemprop="dateModified" content="2021-07-16T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2021-07-16T17:39:51&#43;08:00" />
 <meta itemprop="wordCount" content="1067">
 
 
@@ -339,111 +339,111 @@
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NetworkNIO</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
-	<span class="c1">// 创建一个socket
-</span><span class="c1"></span>	<span class="nx">listener</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="s">&#34;unix&#34;</span><span class="p">,</span> <span class="s">&#34;./chuwt.socket&#34;</span><span class="p">)</span>
-	<span class="k">defer</span> <span class="nx">listener</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="p">)</span>
+    <span class="c1">// 创建一个socket
+</span><span class="c1"></span>    <span class="nx">listener</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="s">&#34;unix&#34;</span><span class="p">,</span> <span class="s">&#34;./chuwt.socket&#34;</span><span class="p">)</span>
+    <span class="k">defer</span> <span class="nx">listener</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="p">)</span>
 
-	<span class="kd">var</span> <span class="nx">fd</span> <span class="kt">int</span>
+    <span class="kd">var</span> <span class="nx">fd</span> <span class="kt">int</span>
 
-	<span class="c1">// 获取此socket的FD
-</span><span class="c1"></span>	<span class="nx">f</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">listener</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UnixListener</span><span class="p">)</span><span class="p">.</span><span class="nf">File</span><span class="p">(</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get listener fd error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fd</span> <span class="p">=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
-	<span class="c1">// 设置FD为非阻塞
-</span><span class="c1"></span>	<span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+    <span class="c1">// 获取此socket的FD
+</span><span class="c1"></span>    <span class="nx">f</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">listener</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UnixListener</span><span class="p">)</span><span class="p">.</span><span class="nf">File</span><span class="p">(</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get listener fd error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">fd</span> <span class="p">=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+    <span class="c1">// 设置FD为非阻塞
+</span><span class="c1"></span>    <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
 
-	<span class="c1">// 创建一个Kqueue
-</span><span class="c1"></span>	<span class="nx">kqFd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kqueue</span><span class="p">(</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;create kqueue error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="c1">// 注册socket的读事件
-</span><span class="c1"></span>	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
-		<span class="p">{</span>
-			<span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span><span class="p">,</span>
-			<span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 读就绪触发
-</span><span class="c1"></span>			<span class="nx">Flags</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span> <span class="p">|</span> <span class="c1">// 添加
-</span><span class="c1"></span>				<span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_CLEAR</span><span class="p">,</span> <span class="c1">// 当触发后，events会清空
-</span><span class="c1"></span>		<span class="p">}</span><span class="p">,</span>
-	<span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;create kqueue error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">events</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">events</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;an error occurred&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-			<span class="k">return</span>
-		<span class="p">}</span>
-		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-			<span class="nx">event</span> <span class="o">:=</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
-			<span class="nx">eventFd</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Ident</span><span class="p">)</span>
-			<span class="k">if</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">|</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_EOF</span> <span class="o">==</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">{</span>
-				<span class="c1">// 退出了
-</span><span class="c1"></span>				<span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span>
-				<span class="c1">// 移除
-</span><span class="c1"></span>				<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
-					<span class="p">{</span>
-						<span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span><span class="p">,</span>
-						<span class="nx">Flags</span><span class="p">:</span>  <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_DELETE</span><span class="p">,</span>
-						<span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 监听读
-</span><span class="c1"></span>					<span class="p">}</span><span class="p">,</span>
-				<span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-				<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;连接&#34;</span><span class="p">,</span> <span class="nx">eventFd</span><span class="p">,</span> <span class="s">&#34;退出&#34;</span><span class="p">)</span>
-				<span class="k">continue</span>
-			<span class="p">}</span>
-			<span class="k">if</span> <span class="nx">eventFd</span> <span class="o">==</span> <span class="nx">fd</span> <span class="p">{</span>
-				<span class="c1">// socket的文件描述符
-</span><span class="c1"></span>				<span class="nx">connFd</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Accept</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span>
-				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
-						<span class="k">continue</span>
-					<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-						<span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span>
-					<span class="p">}</span>
-					<span class="k">continue</span>
-				<span class="p">}</span>
-				<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;收到连接请求:&#34;</span><span class="p">,</span> <span class="nx">connFd</span><span class="p">)</span>
-				<span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">connFd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
-				<span class="c1">// 将新连接加入到监听中
-</span><span class="c1"></span>				<span class="c1">// 这里只注册读事件，可以注册写事件
-</span><span class="c1"></span>				<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
-					<span class="p">{</span>
-						<span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span><span class="p">,</span>
-						<span class="nx">Flags</span><span class="p">:</span>  <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span><span class="p">,</span>
-						<span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 监听读
-</span><span class="c1"></span>					<span class="p">}</span><span class="p">,</span>
-				<span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span>
-				<span class="p">}</span>
+    <span class="c1">// 创建一个Kqueue
+</span><span class="c1"></span>    <span class="nx">kqFd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kqueue</span><span class="p">(</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;create kqueue error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="c1">// 注册socket的读事件
+</span><span class="c1"></span>    <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
+        <span class="p">{</span>
+            <span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span><span class="p">,</span>
+            <span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 读就绪触发
+</span><span class="c1"></span>            <span class="nx">Flags</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span> <span class="p">|</span> <span class="c1">// 添加
+</span><span class="c1"></span>                <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_CLEAR</span><span class="p">,</span> <span class="c1">// 当触发后，events会清空
+</span><span class="c1"></span>        <span class="p">}</span><span class="p">,</span>
+    <span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;create kqueue error&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">events</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">events</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;an error occurred&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+            <span class="nx">event</span> <span class="o">:=</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+            <span class="nx">eventFd</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Ident</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">|</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_EOF</span> <span class="o">==</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">{</span>
+                <span class="c1">// 退出了
+</span><span class="c1"></span>                <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span>
+                <span class="c1">// 移除
+</span><span class="c1"></span>                <span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
+                    <span class="p">{</span>
+                        <span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span><span class="p">,</span>
+                        <span class="nx">Flags</span><span class="p">:</span>  <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_DELETE</span><span class="p">,</span>
+                        <span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 监听读
+</span><span class="c1"></span>                    <span class="p">}</span><span class="p">,</span>
+                <span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+                <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;连接&#34;</span><span class="p">,</span> <span class="nx">eventFd</span><span class="p">,</span> <span class="s">&#34;退出&#34;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="nx">eventFd</span> <span class="o">==</span> <span class="nx">fd</span> <span class="p">{</span>
+                <span class="c1">// socket的文件描述符
+</span><span class="c1"></span>                <span class="nx">connFd</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Accept</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+                        <span class="k">continue</span>
+                    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                        <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span>
+                    <span class="p">}</span>
+                    <span class="k">continue</span>
+                <span class="p">}</span>
+                <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;收到连接请求:&#34;</span><span class="p">,</span> <span class="nx">connFd</span><span class="p">)</span>
+                <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">connFd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+                <span class="c1">// 将新连接加入到监听中
+</span><span class="c1"></span>                <span class="c1">// 这里只注册读事件，可以注册写事件
+</span><span class="c1"></span>                <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">kqFd</span><span class="p">,</span> <span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">{</span>
+                    <span class="p">{</span>
+                        <span class="nx">Ident</span><span class="p">:</span>  <span class="nb">uint64</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span><span class="p">,</span>
+                        <span class="nx">Flags</span><span class="p">:</span>  <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span><span class="p">,</span>
+                        <span class="nx">Filter</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="c1">// 监听读
+</span><span class="c1"></span>                    <span class="p">}</span><span class="p">,</span>
+                <span class="p">}</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                    <span class="nx">_</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">connFd</span><span class="p">)</span>
+                <span class="p">}</span>
 
-			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-				<span class="c1">// 连接的fd就绪了
-</span><span class="c1"></span>				<span class="c1">// 创建一个buf进行读取
-</span><span class="c1"></span>				<span class="nx">buf</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
-				<span class="c1">// 读
-</span><span class="c1"></span>				<span class="nx">rn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">,</span> <span class="nx">buf</span><span class="p">)</span>
-				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-					<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
-						<span class="k">continue</span>
-					<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-						<span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;read error:&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-						<span class="k">continue</span>
-					<span class="p">}</span>
-				<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">rn</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="c1">// 连接的fd就绪了
+</span><span class="c1"></span>                <span class="c1">// 创建一个buf进行读取
+</span><span class="c1"></span>                <span class="nx">buf</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+                <span class="c1">// 读
+</span><span class="c1"></span>                <span class="nx">rn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">eventFd</span><span class="p">,</span> <span class="nx">buf</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+                        <span class="k">continue</span>
+                    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;read error:&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="p">}</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">rn</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
 
-				<span class="p">}</span>
-				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;收到:&#34;</span><span class="p">,</span> <span class="nx">eventFd</span><span class="p">,</span> <span class="s">&#34;的信息:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span><span class="p">)</span>
-			<span class="p">}</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
+                <span class="p">}</span>
+                <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;收到:&#34;</span><span class="p">,</span> <span class="nx">eventFd</span><span class="p">,</span> <span class="s">&#34;的信息:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
@@ -459,7 +459,7 @@
     <span class="item-title">上次更新</span>
     <span class="item-content">
         2021-07-16
-        
+        <a href="https://github.com/chuwt/chuwt.github.io/commit/6bbe7cda271c935ef6836e74856cff9f0789b9ce" title="更换新主题">(6bbe7cd)</a>
     </span>
   </p>
   
