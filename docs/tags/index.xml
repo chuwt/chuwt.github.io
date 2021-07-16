@@ -1,14 +1,42 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Tags on Chuwt&#39;s Blog</title>
+    <title>Tags on chuwt&#39;s blog</title>
     <link>https://chuwt.github.io/tags/</link>
-    <description>Recent content in Tags on Chuwt&#39;s Blog</description>
+    <description>Recent content in Tags on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
-    <copyright>© 2021, Chuwt</copyright>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 16 Jul 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://chuwt.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>golang</title>
+      <link>https://chuwt.github.io/tags/golang/</link>
+      <pubDate>Fri, 16 Jul 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/tags/golang/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>net</title>
+      <link>https://chuwt.github.io/tags/net/</link>
+      <pubDate>Fri, 16 Jul 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/tags/net/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>nio</title>
+      <link>https://chuwt.github.io/tags/nio/</link>
+      <pubDate>Fri, 16 Jul 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/tags/nio/</guid>
+      <description></description>
+    </item>
     
   </channel>
 </rss>
