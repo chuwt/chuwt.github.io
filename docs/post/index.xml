@@ -6,10 +6,19 @@
     <description>Recent content in Posts on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Fri, 16 Jul 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 17 Jul 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://chuwt.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>NIO-evio源码分析</title>
+      <link>https://chuwt.github.io/post/nio-evio%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Sat, 17 Jul 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/post/nio-evio%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
+      <description>开始之前 evio是一个小巧的golang实现的NIO包，阅读源码的实现可以更好的帮助我们学习和了解NIO 源码地址 源码</description>
+    </item>
     
     <item>
       <title>NIO-Kqueue</title>

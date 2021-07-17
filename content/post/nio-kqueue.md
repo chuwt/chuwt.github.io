@@ -56,9 +56,9 @@ type Kevent_t struct {
 }   
 ```
 
-## 一个简单的网络nio
+## 一个简单的网络nio实现
 
-下面是一个简单的网路nio，接收tcp连接，然后读取传送过来的数据
+下面是一个简单的网路nio，接收tcp连接，然后读取传送过来的数据，抛砖引玉
 
 ```go
 func NetworkNIO() {
@@ -100,6 +100,7 @@ func NetworkNIO() {
     events := make([]syscall.Kevent_t, 100)
     for {
         n, err := syscall.Kevent(kqFd, nil, events, nil)
+        // EINTR属于内核错误，直接返回
         if err != nil && err != syscall.EINTR {
             log.Println("an error occurred", err)
             return
@@ -107,6 +108,7 @@ func NetworkNIO() {
         for i := 0; i < n; i++ {
             event := events[i]
             eventFd := int(event.Ident)
+            // 客户端断开连接后，flags会变成 EV_ADD | EV_EOF
             if event.Flags | syscall.EV_EOF == event.Flags {
                 // 退出了
                 _ = syscall.Close(eventFd)
@@ -125,6 +127,7 @@ func NetworkNIO() {
                 // socket的文件描述符
                 connFd, _, err := syscall.Accept(eventFd)
                 if err != nil {
+                    // 非阻塞模式下未就绪返回EAGAIN
                     if err == syscall.EAGAIN {
                         continue
                     } else {
@@ -150,9 +153,9 @@ func NetworkNIO() {
             } else {
                 // 连接的fd就绪了
                 // 创建一个buf进行读取
-                buf := make([]byte, 100)
+                buf := make([]byte, 10)
                 // 读
-                rn, err := syscall.Read(eventFd, buf)
+                _, err = syscall.Read(eventFd, buf)
                 if err != nil {
                     if err == syscall.EAGAIN {
                         continue
@@ -160,8 +163,6 @@ func NetworkNIO() {
                         log.Println("read error:", err)
                         continue
                     }
-                } else if rn == 0 {
-
                 }
                 fmt.Println("收到:", eventFd, "的信息:", string(buf))
             }
@@ -169,4 +170,7 @@ func NetworkNIO() {
     }
 }
 ```
+
+## FreeBSD文档YYDS
+[FreeBSD Manual Pages](https://www.freebsd.org/cgi/man.cgi?query=kqueue&apropos=0&sektion=0&format=html)
 

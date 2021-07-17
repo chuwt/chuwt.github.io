@@ -15,7 +15,7 @@ pygmentsUseClasses = true
 pygmentsCodefencesGuessSyntax = true
 
 hasCJKLanguage = true     # has chinese/japanese/korean ? # 自动检测是否包含 中文\日文\韩文
-paginate = 5                                              # 首页每页显示的文章数
+paginate = 8                                              # 首页每页显示的文章数
 disqusShortname = ""      # disqus_shortname
 googleAnalytics = ""      # UA-XXXXXXXX-X
 copyright = ""            # default: author.name ↓        # 默认为下面配置的author.name ↓
@@ -188,7 +188,7 @@ a-email = "mailto:weitaochu@gmail.com"
 #d-facebook = "http://localhost:1313"
 #e-linkedin = "http://localhost:1313"
 #f-google = "http://localhost:1313"
-g-github = "http://https://github.com/chuwt"
+g-github = "https://github.com/chuwt"
 #h-weibo = "http://localhost:1313"
 #i-zhihu = "http://localhost:1313"
 #j-douban = "http://localhost:1313"
