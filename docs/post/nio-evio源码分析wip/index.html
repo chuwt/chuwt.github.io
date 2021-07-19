@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>NIO-evio源码分析 - chuwt&#39;s blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="chuwt" /><meta name="description" content="开始之前 evio是一个小巧的golang实现的NIO包, 阅读源码的实现可以更好的帮助我们学习和了解NIO 源码地址 简单的echo服务 下面是一个" /><meta name="keywords" content="chuwt, go, golang, blog" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.61.0 with theme even" />
+
+
+<link rel="canonical" href="https://chuwt.github.io/post/nio-evio%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90wip/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.5b4f2756c989c0ef73c0bbe0eae673ad76e0475b18a0c88d4bca3d9718f3f25f.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="NIO-evio源码分析" />
+<meta property="og:description" content="开始之前 evio是一个小巧的golang实现的NIO包, 阅读源码的实现可以更好的帮助我们学习和了解NIO 源码地址 简单的echo服务 下面是一个" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://chuwt.github.io/post/nio-evio%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90wip/" />
+<meta property="article:published_time" content="2021-07-17T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-07-17T00:00:00+00:00" />
+<meta itemprop="name" content="NIO-evio源码分析">
+<meta itemprop="description" content="开始之前 evio是一个小巧的golang实现的NIO包, 阅读源码的实现可以更好的帮助我们学习和了解NIO 源码地址 简单的echo服务 下面是一个">
+<meta itemprop="datePublished" content="2021-07-17T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2021-07-17T00:00:00&#43;00:00" />
+<meta itemprop="wordCount" content="1257">
+
+
+
+<meta itemprop="keywords" content="nio,net,golang,evio," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="NIO-evio源码分析"/>
+<meta name="twitter:description" content="开始之前 evio是一个小巧的golang实现的NIO包, 阅读源码的实现可以更好的帮助我们学习和了解NIO 源码地址 简单的echo服务 下面是一个"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Chuwt&#39;s Blog</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">首页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于我</li>
+      </a><a href="/melon/">
+        <li class="mobile-menu-item">吃瓜</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Chuwt&#39;s Blog</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">首页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于我</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/melon/">吃瓜</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">NIO-evio源码分析</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2021-07-17 </span>
+        
+          <span class="more-meta"> 约 1257 字 </span>
+          <span class="more-meta"> 预计阅读 3 分钟 </span>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">文章目录</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#heading">开始之前</a></li>
+        <li><a href="#echo">简单的echo服务</a></li>
+        <li><a href="#-evioserve">主入口 evio.Serve</a></li>
+        <li><a href="#-serve">处理方法 serve</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h2 id="heading">开始之前</h2>
+<p>evio是一个小巧的golang实现的NIO包, 阅读源码的实现可以更好的帮助我们学习和了解NIO</p>
+<p><a href="https://github.com/tidwall/evio">源码地址</a></p>
+<h2 id="echo">简单的echo服务</h2>
+<p>下面是一个官方的简单echo服务例子</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;github.com/tidwall/evio&#34;</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 定义事件处理方法
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">events</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Events</span>
+    <span class="nx">events</span><span class="p">.</span><span class="nx">Data</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">c</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">in</span> <span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="nx">out</span> <span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">action</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Action</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">out</span> <span class="p">=</span> <span class="nx">in</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="c1">// 主循环入口
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">evio</span><span class="p">.</span><span class="nf">Serve</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="s">&#34;tcp://localhost:5000&#34;</span><span class="p">)</span><span class="p">;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>使用时是比较方便的, 只需要定义一个处理events, 然后实现events定义的几个方法, 然后启动主循环即可. events后面再讲,让我们深入<em>evio.Serve</em>中</p>
+<h2 id="-evioserve">主入口 evio.Serve</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 可以支持同时开启多个网络监听
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">Serve</span><span class="p">(</span><span class="nx">events</span> <span class="nx">Events</span><span class="p">,</span> <span class="nx">addr</span> <span class="o">...</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">lns</span> <span class="p">[</span><span class="p">]</span><span class="o">*</span><span class="nx">listener</span>
+    <span class="k">defer</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">lns</span> <span class="p">{</span>
+            <span class="nx">ln</span><span class="p">.</span><span class="nb">close</span><span class="p">(</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span><span class="p">(</span><span class="p">)</span>
+    <span class="kd">var</span> <span class="nx">stdlib</span> <span class="kt">bool</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">addr</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">addr</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">ln</span> <span class="nx">listener</span>
+        <span class="kd">var</span> <span class="nx">stdlibt</span> <span class="kt">bool</span>
+        <span class="c1">// 主要是用来判断addr, 默认是tcp, 支持udp, unix 还有一个特殊的 -net
+</span><span class="c1"></span>        <span class="c1">// 另外判断了一下 addr是否带有 ?reuseport=true, 然后赋值给 ln.opts.reusePort 
+</span><span class="c1"></span>        <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">,</span> <span class="nx">stdlibt</span> <span class="p">=</span> <span class="nf">parseAddr</span><span class="p">(</span><span class="nx">addr</span><span class="p">)</span>
+        <span class="c1">// 如果network是 -net, 则使用stdlib
+</span><span class="c1"></span>        <span class="c1">// stdlib 指使用
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">stdlibt</span> <span class="p">{</span>
+            <span class="nx">stdlib</span> <span class="p">=</span> <span class="kc">true</span>
+        <span class="p">}</span>
+        <span class="c1">// 创建网络监听的sockets
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span> <span class="o">==</span> <span class="s">&#34;unix&#34;</span> <span class="p">{</span>
+            <span class="nx">os</span><span class="p">.</span><span class="nf">RemoveAll</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+        <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span> <span class="o">==</span> <span class="s">&#34;udp&#34;</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">.</span><span class="nx">reusePort</span> <span class="p">{</span>
+                <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">reuseportListenPacket</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ListenPacket</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">.</span><span class="nx">reusePort</span> <span class="p">{</span>
+                <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">reuseportListen</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">err</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">.</span><span class="nf">LocalAddr</span><span class="p">(</span><span class="p">)</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="nf">Addr</span><span class="p">(</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">!</span><span class="nx">stdlib</span> <span class="p">{</span>
+            <span class="c1">// 获取socket的文件描述符, 赋值给ln.fd, 并设置为非阻塞
+</span><span class="c1"></span>            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ln</span><span class="p">.</span><span class="nf">system</span><span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="nx">err</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">lns</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">lns</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">ln</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">stdlib</span> <span class="p">{</span>
+        <span class="c1">// 使用系统的netpoll, 每个请求开一个线程去处理
+</span><span class="c1"></span>        <span class="k">return</span> <span class="nf">stdserve</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="nx">lns</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// 使用NIO的方式处理, kqueue/epoll
+</span><span class="c1"></span>    <span class="k">return</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="nx">lns</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>主入口主要是对addr做处理, 支持 tcp/unix/udp/-net, 解析套接字fd然后放入一个lns的列表中, 最后根据是否stdlib来分别调用stdserve和serve,
+因为我们主要关注nio, 所以先来看下serve</p>
+<h2 id="-serve">处理方法 serve</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">events</span> <span class="nx">Events</span><span class="p">,</span> <span class="nx">listeners</span> <span class="p">[</span><span class="p">]</span><span class="o">*</span><span class="nx">listener</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="c1">// figure out the correct number of loops/goroutines to use.
+</span><span class="c1"></span>	<span class="c1">// 设定监听线程数
+</span><span class="c1"></span>    <span class="nx">numLoops</span> <span class="o">:=</span> <span class="nx">events</span><span class="p">.</span><span class="nx">NumLoops</span>
+    <span class="k">if</span> <span class="nx">numLoops</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">numLoops</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+            <span class="nx">numLoops</span> <span class="p">=</span> <span class="mi">1</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">numLoops</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">NumCPU</span><span class="p">(</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="nx">s</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">server</span><span class="p">{</span><span class="p">}</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">events</span> <span class="p">=</span> <span class="nx">events</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">lns</span> <span class="p">=</span> <span class="nx">listeners</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">cond</span> <span class="p">=</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">NewCond</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">{</span><span class="p">}</span><span class="p">)</span>
+    <span class="c1">// 负载均衡 Random随机/RoundRobin轮训/LeastConnections最小连接
+</span><span class="c1"></span>    <span class="nx">s</span><span class="p">.</span><span class="nx">balance</span> <span class="p">=</span> <span class="nx">events</span><span class="p">.</span><span class="nx">LoadBalance</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">tch</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span>
+
+    <span class="c1">//println(&#34;-- server starting&#34;)
+</span><span class="c1"></span>    <span class="c1">// 当准备accept新连接时运行events的Serving方法，具体看后面events的分析
+</span><span class="c1"></span>    <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Serving</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">svr</span> <span class="nx">Server</span>
+        <span class="nx">svr</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">=</span> <span class="nx">numLoops</span>
+        <span class="nx">svr</span><span class="p">.</span><span class="nx">Addrs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">net</span><span class="p">.</span><span class="nx">Addr</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">listeners</span><span class="p">)</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">listeners</span> <span class="p">{</span>
+            <span class="nx">svr</span><span class="p">.</span><span class="nx">Addrs</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span>
+        <span class="p">}</span>
+        <span class="nx">action</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">Serving</span><span class="p">(</span><span class="nx">svr</span><span class="p">)</span>
+        <span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nx">None</span><span class="p">:</span>
+        <span class="k">case</span> <span class="nx">Shutdown</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">nil</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">defer</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// wait on a signal for shutdown
+</span><span class="c1"></span>        <span class="nx">s</span><span class="p">.</span><span class="nf">waitForShutdown</span><span class="p">(</span><span class="p">)</span>
+
+        <span class="c1">// notify all loops to close by closing all listeners
+</span><span class="c1"></span>        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+            <span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Trigger</span><span class="p">(</span><span class="nx">errClosing</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1">// wait on all loops to complete reading events
+</span><span class="c1"></span>        <span class="nx">s</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">(</span><span class="p">)</span>
+
+        <span class="c1">// close loops and all outstanding connections
+</span><span class="c1"></span>        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">l</span><span class="p">.</span><span class="nx">fdconns</span> <span class="p">{</span>
+                <span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="c1">//println(&#34;-- server stopped&#34;)
+</span><span class="c1"></span>    <span class="p">}</span><span class="p">(</span><span class="p">)</span>
+
+    <span class="c1">// create loops locally and bind the listeners.
+</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numLoops</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">l</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">loop</span><span class="p">{</span>
+            <span class="nx">idx</span><span class="p">:</span>     <span class="nx">i</span><span class="p">,</span>
+            <span class="nx">poll</span><span class="p">:</span>    <span class="nx">internal</span><span class="p">.</span><span class="nf">OpenPoll</span><span class="p">(</span><span class="p">)</span><span class="p">,</span>  <span class="c1">// 创建Kqueue/epoll
+</span><span class="c1"></span>            <span class="nx">packet</span><span class="p">:</span>  <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="mh">0xFFFF</span><span class="p">)</span><span class="p">,</span> <span class="c1">// 读缓冲
+</span><span class="c1"></span>            <span class="nx">fdconns</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="o">*</span><span class="nx">conn</span><span class="p">)</span><span class="p">,</span>  <span class="c1">// 连接管理的map
+</span><span class="c1"></span>        <span class="p">}</span>
+        <span class="c1">// 添加read事件到Kqueue/epoll的changes列表，这里并没有调用方法，只是append到了列表中
+</span><span class="c1"></span>        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">listeners</span> <span class="p">{</span>
+            <span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">AddRead</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">,</span> <span class="nx">l</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// start loops in background
+</span><span class="c1"></span>    <span class="nx">s</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">)</span><span class="p">)</span>
+    <span class="c1">// 启动多个线程的监听
+</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+        <span class="k">go</span> <span class="nf">loopRun</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div>
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">文章作者</span>
+    <span class="item-content">chuwt</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">上次更新</span>
+    <span class="item-content">
+        2021-07-17
+        
+    </span>
+  </p>
+  
+  
+</div>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/nio/">nio</a>
+          <a href="/tags/net/">net</a>
+          <a href="/tags/golang/">golang</a>
+          <a href="/tags/evio/">evio</a>
+          </div>
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/nio-kqueue/">
+            <span class="next-text nav-default">NIO-Kqueue</span>
+            <span class="next-text nav-mobile">下一篇</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:weitaochu@gmail.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/chuwt" class="iconfont icon-github" title="github"></a>
+  <a href="https://chuwt.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    由 <a class="hexo-link" href="https://gohugo.io">Hugo</a> 强力驱动
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    主题 - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>chuwt</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>
