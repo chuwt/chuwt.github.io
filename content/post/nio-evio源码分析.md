@@ -13,5 +13,93 @@ evio是一个小巧的golang实现的NIO包，阅读源码的实现可以更好�
 
 [源码地址](https://github.com/tidwall/evio)
 
-## 源码
+## 简单的echo服务
+下面是一个官方的简单echo服务例子
+```go
+package main
+
+import "github.com/tidwall/evio"
+
+func main() {
+	// 定义事件处理方法
+	var events evio.Events
+	events.Data = func(c evio.Conn, in []byte) (out []byte, action evio.Action) {
+		out = in
+		return
+	}
+	// 主循环入口
+	if err := evio.Serve(events, "tcp://localhost:5000"); err != nil {
+		panic(err.Error())
+	}
+}
+```
+使用时是比较方便的，只需要定义一个处理events，然后实现events定义的几个方法，然后启动主循环即可。events后面再讲，让我们深入*evio.Serve*中
+
+## evio.Serve
+```go
+// 可以支持同时开启多个网络监听
+func Serve(events Events, addr ...string) error {
+	var lns []*listener
+	defer func() {
+		for _, ln := range lns {
+			ln.close()
+		}
+	}()
+	var stdlib bool
+	for _, addr := range addr {
+		var ln listener
+		var stdlibt bool
+		// 主要是用来判断addr，默认是tcp，支持udp，unix 还有一个特殊的 -net
+		// 另外判断了一下 addr是否带有 ?reuseport=true，然后赋值给 ln.opts.reusePort 
+		ln.network, ln.addr, ln.opts, stdlibt = parseAddr(addr)
+		// 如果network是 -net，则使用stdlib
+		// stdlib 指使用
+		if stdlibt {
+			stdlib = true
+		}
+		// 创建网络监听的sockets
+		if ln.network == "unix" {
+			os.RemoveAll(ln.addr)
+		}
+		var err error
+		if ln.network == "udp" {
+			if ln.opts.reusePort {
+				ln.pconn, err = reuseportListenPacket(ln.network, ln.addr)
+			} else {
+				ln.pconn, err = net.ListenPacket(ln.network, ln.addr)
+			}
+		} else {
+			if ln.opts.reusePort {
+				ln.ln, err = reuseportListen(ln.network, ln.addr)
+			} else {
+				ln.ln, err = net.Listen(ln.network, ln.addr)
+			}
+		}
+		if err != nil {
+			return err
+		}
+		if ln.pconn != nil {
+			ln.lnaddr = ln.pconn.LocalAddr()
+		} else {
+			ln.lnaddr = ln.ln.Addr()
+		}
+		if !stdlib {
+			// 获取socket的文件描述符, 赋值给ln.fd, 并设置为非阻塞
+			if err := ln.system(); err != nil {
+				return err
+			}
+		}
+		lns = append(lns, &ln)
+	}
+	if stdlib {
+		// 使用系统的netpoll，每个请求开一个线程去处理
+		return stdserve(events, lns)
+	}
+	// 使用NIO的方式处理
+	return serve(events, lns)
+}
+```
+
+## serve
+
 
