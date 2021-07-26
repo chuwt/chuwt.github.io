@@ -1,5 +1,5 @@
 ---
-title: "NIO-evio源码分析WIP"
+title: "NIO-evio源码分析"
 date: 2021-07-17
 lastmod: 2021-07-17
 draft: false
@@ -466,7 +466,83 @@ func loopWrite(s *server, l *loop, c *conn) error {
 	return nil
 }
 ```
+写方法主要是当写缓冲（c.out）中存在数据时进行调用。当内核写缓冲不足，只写了一部分之后，保留剩下的部分，继续进入循环
 ### loopAction
+action主要是对一个定义的行为进行操作
+```go
+func loopAction(s *server, l *loop, c *conn) error {
+	switch c.action {
+	default:
+		c.action = None
+    // 关闭连接
+	case Close:
+		return loopCloseConn(s, l, c, nil)
+    // 关闭服务
+	case Shutdown:
+		return errClosing
+    // 分离连接，events的Detached必须定义，分离后的连接不再被管理，并由events.Detached调用后处理
+	case Detach:
+		return loopDetachConn(s, l, c, nil)
+	}
+	// 默认读模式
+	if len(c.out) == 0 && c.action == None {
+		l.poll.ModRead(c.fd)
+	}
+	return nil
+}
+```
+action主要是定义了三个操作：关闭连接，关闭服务，分离连接（类似net/http的hijack）
 ### loopRead
+默认的读操作
+```go
+func loopRead(s *server, l *loop, c *conn) error {
+	var in []byte
+	// packet是读缓冲，在loop创建时定义的，大小为0xFFFF
+	n, err := syscall.Read(c.fd, l.packet)
+	if n == 0 || err != nil {
+		// 如果内核返回EAGAIN，则直接返回，等待下次调用
+		if err == syscall.EAGAIN {
+			return nil
+		}
+		// 其他错误关闭连接
+		return loopCloseConn(s, l, c, err)
+	}
+	// 读完后赋值给in, 这样就腾出来packet给其他连接使用了，由于是每个loop是单线程，所以不存在锁的问题
+	in = l.packet[:n]
+	// 如果不复用，则会拷贝一份数据到新的内存地址，这里主要考虑到in和packet共享了同一块内存数据，如果有修改会互相影响
+	if !c.reuse {
+		in = append([]byte{}, in...)
+	}
+	// 如果Data不为空，则调用Data，Data属于主要的处理方法
+	if s.events.Data != nil {
+		out, action := s.events.Data(c, in)
+		c.action = action
+		// 如果有输出则保存输出，这里也是重新申请了内存，然后将out的数据复制过去
+		if len(out) > 0 {
+			c.out = append(c.out[:0], out...)
+		}
+	}
+	// 如果存在out数据，则注册写事件，后面写就绪后会触发写事件
+	if len(c.out) != 0 || c.action != None {
+		l.poll.ModReadWrite(c.fd)
+	}
+	return nil
+}
+```
+读方法主要是对数据的读取，然后调用Data方法，所以具体的逻辑处理都是在Data中进行的。比如说读取的数据不完整，需要在Data中做记录，然后继续等待
+数据填充结束，类似http协议中的`content-length`
+
+## EVENTS
+evio定义了一个events数据结构，他有几个参数是用来做一些逻辑处理的
+- Serving 当服务启动的时候会调用一次
+- Opened 当新连接建立后会调用一次
+- Closed 当连接关闭时调用
+- Detach 当收到action为Detach时调用
+- Data 当从连接中读取到数据时调用
+- Tick 服务启动的时候调用一次，后面会定时调用
+
+## 总结
+evio的整体架构还是比较清晰的，外层通过events的几个方法编写逻辑，进行数据处理；内层通过 Kqueue/Epoll 事件驱动的形式进行数据读写，同时通过
+events返回的action可以通知内层逻辑处理。
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>NIO-evio源码分析WIP - chuwt&#39;s blog</title>
+  <title>NIO-evio源码分析 - chuwt&#39;s blog</title>
   <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 
@@ -39,22 +39,22 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
-<meta property="og:title" content="NIO-evio源码分析WIP" />
+<meta property="og:title" content="NIO-evio源码分析" />
 <meta property="og:description" content="开始之前 evio是一个小巧的golang实现的NIO包，阅读源码的实现可以更好的帮助我们学习和了解NIO 由于使用mac，所以下面的分析主要以" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://chuwt.github.io/post/nio-evio%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" />
 <meta property="article:published_time" content="2021-07-17T00:00:00+00:00" />
 <meta property="article:modified_time" content="2021-07-17T00:00:00+00:00" />
-<meta itemprop="name" content="NIO-evio源码分析WIP">
+<meta itemprop="name" content="NIO-evio源码分析">
 <meta itemprop="description" content="开始之前 evio是一个小巧的golang实现的NIO包，阅读源码的实现可以更好的帮助我们学习和了解NIO 由于使用mac，所以下面的分析主要以">
 <meta itemprop="datePublished" content="2021-07-17T00:00:00&#43;00:00" />
 <meta itemprop="dateModified" content="2021-07-17T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="3977">
+<meta itemprop="wordCount" content="4991">
 
 
 
 <meta itemprop="keywords" content="nio,net,golang,evio," /><meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="NIO-evio源码分析WIP"/>
+<meta name="twitter:title" content="NIO-evio源码分析"/>
 <meta name="twitter:description" content="开始之前 evio是一个小巧的golang实现的NIO包，阅读源码的实现可以更好的帮助我们学习和了解NIO 由于使用mac，所以下面的分析主要以"/>
 
 <!--[if lte IE 9]>
@@ -132,13 +132,13 @@
           <article class="post">
     
     <header class="post-header">
-      <h1 class="post-title">NIO-evio源码分析WIP</h1>
+      <h1 class="post-title">NIO-evio源码分析</h1>
 
       <div class="post-meta">
         <span class="post-time"> 2021-07-17 </span>
         
-          <span class="more-meta"> 约 3977 字 </span>
-          <span class="more-meta"> 预计阅读 8 分钟 </span>
+          <span class="more-meta"> 约 4991 字 </span>
+          <span class="more-meta"> 预计阅读 10 分钟 </span>
         
       </div>
     </header>
@@ -166,6 +166,8 @@
             <li><a href="#loopread">loopRead</a></li>
           </ul>
         </li>
+        <li><a href="#events">EVENTS</a></li>
+        <li><a href="#heading-2">总结</a></li>
       </ul>
     </li>
   </ul>
@@ -1065,8 +1067,145 @@
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><h3 id="loopaction">loopAction</h3>
+</div><p>写方法主要是当写缓冲（c.out）中存在数据时进行调用。当内核写缓冲不足，只写了一部分之后，保留剩下的部分，继续进入循环</p>
+<h3 id="loopaction">loopAction</h3>
+<p>action主要是对一个定义的行为进行操作</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">loopAction</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">c</span> <span class="o">*</span><span class="nx">conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">{</span>
+	<span class="k">default</span><span class="p">:</span>
+		<span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">=</span> <span class="nx">None</span>
+    <span class="c1">// 关闭连接
+</span><span class="c1"></span>	<span class="k">case</span> <span class="nx">Close</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+    <span class="c1">// 关闭服务
+</span><span class="c1"></span>	<span class="k">case</span> <span class="nx">Shutdown</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nx">errClosing</span>
+    <span class="c1">// 分离连接，events的Detached必须定义，分离后的连接不再被管理，并由events.Detached调用后处理
+</span><span class="c1"></span>	<span class="k">case</span> <span class="nx">Detach</span><span class="p">:</span>
+		<span class="k">return</span> <span class="nf">loopDetachConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// 默认读模式
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">==</span> <span class="nx">None</span> <span class="p">{</span>
+		<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">ModRead</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>action主要是定义了三个操作：关闭连接，关闭服务，分离连接（类似net/http的hijack）</p>
 <h3 id="loopread">loopRead</h3>
+<p>默认的读操作</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">loopRead</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">c</span> <span class="o">*</span><span class="nx">conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">in</span> <span class="p">[</span><span class="p">]</span><span class="kt">byte</span>
+	<span class="c1">// packet是读缓冲，在loop创建时定义的，大小为0xFFFF
+</span><span class="c1"></span>	<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">l</span><span class="p">.</span><span class="nx">packet</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="c1">// 如果内核返回EAGAIN，则直接返回，等待下次调用
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kc">nil</span>
+		<span class="p">}</span>
+		<span class="c1">// 其他错误关闭连接
+</span><span class="c1"></span>		<span class="k">return</span> <span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// 读完后赋值给in, 这样就腾出来packet给其他连接使用了，由于是每个loop是单线程，所以不存在锁的问题
+</span><span class="c1"></span>	<span class="nx">in</span> <span class="p">=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">packet</span><span class="p">[</span><span class="p">:</span><span class="nx">n</span><span class="p">]</span>
+	<span class="c1">// 如果不复用，则会拷贝一份数据到新的内存地址，这里主要考虑到in和packet共享了同一块内存数据，如果有修改会互相影响
+</span><span class="c1"></span>	<span class="k">if</span> <span class="p">!</span><span class="nx">c</span><span class="p">.</span><span class="nx">reuse</span> <span class="p">{</span>
+		<span class="nx">in</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">{</span><span class="p">}</span><span class="p">,</span> <span class="nx">in</span><span class="o">...</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// 如果Data不为空，则调用Data，Data属于主要的处理方法
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Data</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">out</span><span class="p">,</span> <span class="nx">action</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">Data</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">in</span><span class="p">)</span>
+		<span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">=</span> <span class="nx">action</span>
+		<span class="c1">// 如果有输出则保存输出，这里也是重新申请了内存，然后将out的数据复制过去
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+			<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">[</span><span class="p">:</span><span class="mi">0</span><span class="p">]</span><span class="p">,</span> <span class="nx">out</span><span class="o">...</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="c1">// 如果存在out数据，则注册写事件，后面写就绪后会触发写事件
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">!=</span> <span class="nx">None</span> <span class="p">{</span>
+		<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">ModReadWrite</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>读方法主要是对数据的读取，然后调用Data方法，所以具体的逻辑处理都是在Data中进行的。比如说读取的数据不完整，需要在Data中做记录，然后继续等待
+数据填充结束，类似http协议中的<code>content-length</code></p>
+<h2 id="events">EVENTS</h2>
+<p>evio定义了一个events数据结构，他有几个参数是用来做一些逻辑处理的</p>
+<ul>
+<li>Serving 当服务启动的时候会调用一次</li>
+<li>Opened 当新连接建立后会调用一次</li>
+<li>Closed 当连接关闭时调用</li>
+<li>Detach 当收到action为Detach时调用</li>
+<li>Data 当从连接中读取到数据时调用</li>
+<li>Tick 服务启动的时候调用一次，后面会定时调用</li>
+</ul>
+<h2 id="heading-2">总结</h2>
+<p>evio的整体架构还是比较清晰的，外层通过events的几个方法编写逻辑，进行数据处理；内层通过 Kqueue/Epoll 事件驱动的形式进行数据读写，同时通过
+events返回的action可以通知内层逻辑处理。</p>
 
     </div>
 
@@ -1093,7 +1232,11 @@
           <a href="/tags/evio/">evio</a>
           </div>
       <nav class="post-nav">
-        
+        <a class="prev" href="/post/nio-netpoll%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">NIO-evio源码分析</span>
+            <span class="prev-text nav-mobile">上一篇</span>
+          </a>
         <a class="next" href="/post/nio-kqueue/">
             <span class="next-text nav-default">NIO-Kqueue</span>
             <span class="next-text nav-mobile">下一篇</span>
