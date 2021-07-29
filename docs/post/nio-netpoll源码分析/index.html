@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<meta name="author" content="chuwt" /><meta name="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 源码地址" /><meta name="keywords" content="chuwt, go, golang, blog" />
+<meta name="author" content="chuwt" /><meta name="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque" /><meta name="keywords" content="chuwt, go, golang, blog" />
 
 
 
@@ -40,22 +40,22 @@
 
 
 <meta property="og:title" content="NIO-netpoll源码分析 WIP" />
-<meta property="og:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 源码地址" />
+<meta property="og:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://chuwt.github.io/post/nio-netpoll%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" />
 <meta property="article:published_time" content="2021-07-26T00:00:00+00:00" />
 <meta property="article:modified_time" content="2021-07-26T00:00:00+00:00" />
 <meta itemprop="name" content="NIO-netpoll源码分析 WIP">
-<meta itemprop="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 源码地址">
+<meta itemprop="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque">
 <meta itemprop="datePublished" content="2021-07-26T00:00:00&#43;00:00" />
 <meta itemprop="dateModified" content="2021-07-26T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="52">
+<meta itemprop="wordCount" content="3829">
 
 
 
 <meta itemprop="keywords" content="nio,net,golang,netpoll," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="NIO-netpoll源码分析 WIP"/>
-<meta name="twitter:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 源码地址"/>
+<meta name="twitter:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque"/>
 
 <!--[if lte IE 9]>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
@@ -137,8 +137,8 @@
       <div class="post-meta">
         <span class="post-time"> 2021-07-26 </span>
         
-          <span class="more-meta"> 约 52 字 </span>
-          <span class="more-meta"> 预计阅读 1 分钟 </span>
+          <span class="more-meta"> 约 3829 字 </span>
+          <span class="more-meta"> 预计阅读 8 分钟 </span>
         
       </div>
     </header>
@@ -151,6 +151,15 @@
     <li>
       <ul>
         <li><a href="#heading">开始之前</a></li>
+        <li><a href="#heading-1">示例</a></li>
+        <li><a href="#listener">创建listener</a></li>
+        <li><a href="#eventloop">创建eventLoop</a></li>
+        <li><a href="#eventloopserve">eventLoop.Serve</a></li>
+        <li><a href="#serverrun">server.Run</a></li>
+        <li><a href="#pollmanager">pollmanager</a></li>
+        <li><a href="#control">Control</a></li>
+        <li><a href="#poolwait">pool.Wait</a></li>
+        <li><a href="#onread">onRead</a></li>
       </ul>
     </li>
   </ul>
@@ -161,9 +170,1063 @@
       <h2 id="heading">开始之前</h2>
 <ul>
 <li>上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll</li>
+<li>由于使用mac，所以下面的分析主要以Kqueue为主，Epoll大同小异</li>
 </ul>
 <p><a href="https://github.com/cloudwego/netpoll">源码地址</a></p>
+<h2 id="heading-1">示例</h2>
+<p>先上一个官方示例看一看使用方法</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+	<span class="s">&#34;github.com/cloudwego/netpoll&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">network</span><span class="p">,</span> <span class="nx">address</span> <span class="o">:=</span> <span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="s">&#34;127.0.0.1:8888&#34;</span>
+	
+	<span class="c1">// 创建 listener
+</span><span class="c1"></span>	<span class="nx">listener</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netpoll</span><span class="p">.</span><span class="nf">CreateListener</span><span class="p">(</span><span class="nx">network</span><span class="p">,</span> <span class="nx">address</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;create netpoll listener fail&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	
+	<span class="c1">// handle: 连接读数据和处理逻辑
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">onRequest</span> <span class="nx">netpoll</span><span class="p">.</span><span class="nx">OnRequest</span> <span class="p">=</span> <span class="nx">handler</span>
+	
+	<span class="c1">// options: EventLoop 初始化自定义配置项
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">opts</span> <span class="p">=</span> <span class="p">[</span><span class="p">]</span><span class="nx">netpoll</span><span class="p">.</span><span class="nx">Option</span><span class="p">{</span>
+		<span class="nx">netpoll</span><span class="p">.</span><span class="nf">WithReadTimeout</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span><span class="p">,</span>
+		<span class="nx">netpoll</span><span class="p">.</span><span class="nf">WithIdleTimeout</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">)</span><span class="p">,</span>
+		<span class="nx">netpoll</span><span class="p">.</span><span class="nf">WithOnPrepare</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span><span class="p">,</span>
+	<span class="p">}</span>
+	
+	<span class="c1">// 创建 EventLoop
+</span><span class="c1"></span>	<span class="nx">eventLoop</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netpoll</span><span class="p">.</span><span class="nf">NewEventLoop</span><span class="p">(</span><span class="nx">onRequest</span><span class="p">,</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;create netpoll event-loop fail&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	
+	<span class="c1">// 运行 Server
+</span><span class="c1"></span>	<span class="nx">err</span> <span class="p">=</span> <span class="nx">eventLoop</span><span class="p">.</span><span class="nf">Serve</span><span class="p">(</span><span class="nx">listener</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;netpoll server exit&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 读事件处理
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">handler</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">connection</span> <span class="nx">netpoll</span><span class="p">.</span><span class="nx">Connection</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">connection</span><span class="p">.</span><span class="nf">Writer</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="nf">Flush</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>使用逻辑还是很清晰的：</p>
+<ol>
+<li>创建listener</li>
+<li>编写处理handler</li>
+<li>创建eventLoop</li>
+<li>启动eventLoop</li>
+</ol>
+<h2 id="listener">创建listener</h2>
+<p>首先看下创建listener的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// CreateListener return a new Listener.
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">CreateListener</span><span class="p">(</span><span class="nx">network</span><span class="p">,</span> <span class="nx">addr</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">l</span> <span class="nx">Listener</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">ln</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">listener</span><span class="p">{</span>
+		<span class="nx">network</span><span class="p">:</span> <span class="nx">network</span><span class="p">,</span>
+		<span class="nx">addr</span><span class="p">:</span>    <span class="nx">addr</span><span class="p">,</span>
+	<span class="p">}</span>
+
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">ln</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span><span class="p">(</span><span class="p">)</span>
+
+	<span class="c1">// 创建udp的listener，并且获取fd
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span> <span class="o">==</span> <span class="s">&#34;udp&#34;</span> <span class="p">{</span>
+		<span class="c1">// TODO: udp listener.
+</span><span class="c1"></span>		<span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ListenPacket</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">.</span><span class="nf">LocalAddr</span><span class="p">(</span><span class="p">)</span>
+		<span class="k">switch</span> <span class="nx">pconn</span> <span class="o">:=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">.</span><span class="p">(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UDPConn</span><span class="p">:</span>
+			<span class="nx">ln</span><span class="p">.</span><span class="nx">file</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">pconn</span><span class="p">.</span><span class="nf">File</span><span class="p">(</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="c1">// 获取 tcp, tcp4, tcp6, unix 的fd
+</span><span class="c1"></span>		<span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="nf">Addr</span><span class="p">(</span><span class="p">)</span>
+		<span class="k">switch</span> <span class="nx">netln</span> <span class="o">:=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="p">(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">TCPListener</span><span class="p">:</span>
+			<span class="nx">ln</span><span class="p">.</span><span class="nx">file</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">netln</span><span class="p">.</span><span class="nf">File</span><span class="p">(</span><span class="p">)</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UnixListener</span><span class="p">:</span>
+			<span class="nx">ln</span><span class="p">.</span><span class="nx">file</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">netln</span><span class="p">.</span><span class="nf">File</span><span class="p">(</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span> <span class="p">=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">file</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+	<span class="c1">// 设置为非阻塞
+</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">ln</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>CreateListener的目的主要是获取listener的fd，并设置为非阻塞</p>
+<h2 id="eventloop">创建eventLoop</h2>
+<p>暂时先不理会handler，看一看eventLoop的创建</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewEventLoop</span><span class="p">(</span><span class="nx">onRequest</span> <span class="nx">OnRequest</span><span class="p">,</span> <span class="nx">ops</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="p">(</span><span class="nx">EventLoop</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="cm">/* 接收配置
+</span><span class="cm">	 目前可用的配置主要有三个
+</span><span class="cm">	 1. onPrepare   连接初始化之前的准备操作，比如qps limiter
+</span><span class="cm">	 2. readTimeout 读超时
+</span><span class="cm">	 3. idleTimeout 空闲超时
+</span><span class="cm">	 */</span>
+	<span class="nx">opt</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">options</span><span class="p">{</span><span class="p">}</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">do</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">ops</span> <span class="p">{</span>
+		<span class="nx">do</span><span class="p">.</span><span class="nf">f</span><span class="p">(</span><span class="nx">opt</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// EventLoop是一个interface
+</span><span class="c1"></span>	<span class="c1">// eventLoop是一个实现了EventLoop接口的结构体
+</span><span class="c1"></span>	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">eventLoop</span><span class="p">{</span>
+		<span class="nx">opt</span><span class="p">:</span>     <span class="nx">opt</span><span class="p">,</span>                    <span class="c1">// 上面的opt
+</span><span class="c1"></span>		<span class="nx">prepare</span><span class="p">:</span> <span class="nx">opt</span><span class="p">.</span><span class="nf">prepare</span><span class="p">(</span><span class="nx">onRequest</span><span class="p">)</span><span class="p">,</span> <span class="c1">// 装饰器，每个连接进来后都会调用此方法
+</span><span class="c1"></span>		<span class="nx">stop</span><span class="p">:</span>    <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="p">,</span>    <span class="c1">// 服务停止
+</span><span class="c1"></span>	<span class="p">}</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>NewEventLoop主要是初始化eventLoop的配置，主要有</p>
+<ol>
+<li>onPrepare   连接初始化之前的准备操作，比如qps limiter</li>
+<li>readTimeout 读超时</li>
+<li>idleTimeout 空闲超时</li>
+</ol>
+<h2 id="eventloopserve">eventLoop.Serve</h2>
+<p>最后的入口是Serve，让我们看看Serve的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">eventLoop</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+    <span class="nx">opt</span>     <span class="o">*</span><span class="nx">options</span>
+    <span class="nx">prepare</span> <span class="nx">OnPrepare</span>
+    <span class="nx">svr</span>     <span class="o">*</span><span class="nx">server</span>
+    <span class="nx">stop</span>    <span class="kd">chan</span> <span class="kt">error</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">evl</span> <span class="o">*</span><span class="nx">eventLoop</span><span class="p">)</span> <span class="nf">Serve</span><span class="p">(</span><span class="nx">ln</span> <span class="nx">Listener</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">evl</span><span class="p">.</span><span class="nf">Lock</span><span class="p">(</span><span class="p">)</span>
+	<span class="c1">// 生成server
+</span><span class="c1"></span>	<span class="cm">/*
+</span><span class="cm">	func newServer(ln Listener, prepare OnPrepare, quit func(err error)) *server {
+</span><span class="cm">		return &amp;server{
+</span><span class="cm">			ln:      ln,
+</span><span class="cm">			prepare: prepare,
+</span><span class="cm">			quit:    quit,
+</span><span class="cm">		}
+</span><span class="cm">	}
+</span><span class="cm">	 */</span>
+	<span class="nx">evl</span><span class="p">.</span><span class="nx">svr</span> <span class="p">=</span> <span class="nf">newServer</span><span class="p">(</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">evl</span><span class="p">.</span><span class="nx">prepare</span><span class="p">,</span> <span class="nx">evl</span><span class="p">.</span><span class="nx">quit</span><span class="p">)</span>
+	<span class="c1">// 启动server
+</span><span class="c1"></span>	<span class="c1">// Run方法是主要的启动方法
+</span><span class="c1"></span>	<span class="nx">evl</span><span class="p">.</span><span class="nx">svr</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="p">)</span>
+	<span class="nx">evl</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">(</span><span class="p">)</span>
+	<span class="c1">// 等待server退出
+</span><span class="c1"></span>    <span class="cm">/*
+</span><span class="cm">    func (evl *eventLoop) waitQuit() error {
+</span><span class="cm">		return &lt;-evl.stop
+</span><span class="cm">	}
+</span><span class="cm">     */</span>
+	<span class="k">return</span> <span class="nx">evl</span><span class="p">.</span><span class="nf">waitQuit</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Serve包括三个流程</p>
+<ol>
+<li>创建server对象</li>
+<li>调用server.Run</li>
+<li>等待server退出</li>
+</ol>
+<h2 id="serverrun">server.Run</h2>
+<p>看一看server运行的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Run this server.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="p">)</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 新建一个FDOperator对象
+</span><span class="c1"></span>	<span class="nx">s</span><span class="p">.</span><span class="nx">operator</span> <span class="p">=</span> <span class="nx">FDOperator</span><span class="p">{</span>
+		<span class="nx">FD</span><span class="p">:</span>     <span class="nx">s</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="c1">// socket的FD
+</span><span class="c1"></span>		<span class="nx">OnRead</span><span class="p">:</span> <span class="nx">s</span><span class="p">.</span><span class="nx">OnRead</span><span class="p">,</span>  <span class="c1">// Read方法，主要是Accept接受连接，后面进行分析
+</span><span class="c1"></span>		<span class="cm">/*
+</span><span class="cm">		func (s *server) OnHup(p Poll) error {
+</span><span class="cm">			s.quit(errors.New(&#34;listener close&#34;))
+</span><span class="cm">			return nil
+</span><span class="cm">		}
+</span><span class="cm">		OnHup则直接调用quit关闭server
+</span><span class="cm">		 */</span>
+		<span class="nx">OnHup</span><span class="p">:</span>  <span class="nx">s</span><span class="p">.</span><span class="nx">OnHup</span><span class="p">,</span> 
+	<span class="p">}</span>
+	<span class="c1">// 这里的 pollmanager 是通过init方法进行初始化的，后面进行分析
+</span><span class="c1"></span>	<span class="c1">// Pick是根据负载均衡获取一个poll
+</span><span class="c1"></span>	<span class="nx">s</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nx">poll</span> <span class="p">=</span> <span class="nx">pollmanager</span><span class="p">.</span><span class="nf">Pick</span><span class="p">(</span><span class="p">)</span>
+	<span class="c1">// Control则调用 poll.Control 
+</span><span class="c1"></span>	<span class="nx">err</span> <span class="p">=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nf">Control</span><span class="p">(</span><span class="nx">PollReadable</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">s</span><span class="p">.</span><span class="nf">quit</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>Run方法首先创建了一个operator对象，然后通过pollmanager获取一个poll，然后调用poll的Control方法。接下来我们看一看pollmanager是哪里来的，
+poll又是如何创建的</p>
+<h2 id="pollmanager">pollmanager</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// poll_manager.go
+</span><span class="c1"></span>
+<span class="kd">func</span> <span class="nf">init</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 根据cpu数量判断线程数
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">loops</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">GOMAXPROCS</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="mi">20</span> <span class="o">+</span> <span class="mi">1</span>
+	<span class="cm">/*
+</span><span class="cm">	type manager struct {
+</span><span class="cm">		NumLoops int
+</span><span class="cm">		balance  loadbalance // load balancing method
+</span><span class="cm">		polls    []Poll      // all the polls
+</span><span class="cm">	}
+</span><span class="cm">	 */</span>
+	<span class="nx">pollmanager</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">manager</span><span class="p">{</span><span class="p">}</span>
+	<span class="c1">// 获取一个负载均衡对象，然后赋值给balance，目前只支持：RoundRobin轮训，Random随机
+</span><span class="c1"></span>	<span class="nx">pollmanager</span><span class="p">.</span><span class="nf">SetLoadBalance</span><span class="p">(</span><span class="nx">RoundRobin</span><span class="p">)</span>
+	<span class="c1">// 设置线程循环，具体看下面的方法 
+</span><span class="c1"></span>	<span class="nx">pollmanager</span><span class="p">.</span><span class="nf">SetNumLoops</span><span class="p">(</span><span class="nx">loops</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// SetNumLoops will return error when set numLoops &lt; 1
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">manager</span><span class="p">)</span> <span class="nf">SetNumLoops</span><span class="p">(</span><span class="nx">numLoops</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">numLoops</span> <span class="p">&lt;</span> <span class="mi">1</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;set invaild numLoops[%d]&#34;</span><span class="p">,</span> <span class="nx">numLoops</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// if less than, reset all; else new the delta.
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">numLoops</span> <span class="p">&lt;</span> <span class="nx">m</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">{</span>
+		<span class="nx">m</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">=</span> <span class="nx">numLoops</span>
+		<span class="cm">/*
+</span><span class="cm">		func (m *manager) Reset() error {
+</span><span class="cm">			for _, poll := range m.polls {
+</span><span class="cm">				poll.Close()
+</span><span class="cm">			}
+</span><span class="cm">			m.polls = nil
+</span><span class="cm">			return m.Run()
+</span><span class="cm">		}
+</span><span class="cm">		关闭所有已经存在的poll，然后重新调用Run方法
+</span><span class="cm">		 */</span>
+		<span class="k">return</span> <span class="nx">m</span><span class="p">.</span><span class="nf">Reset</span><span class="p">(</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">m</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">=</span> <span class="nx">numLoops</span>
+	<span class="c1">// 启动循环线程，具体看下面的方法
+</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">m</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// Run all pollers.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">manager</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">// new poll to fill delta.
+</span><span class="c1"></span>	<span class="c1">// 创建NumLoops个poll，然后调用pool.Wait方法
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">idx</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">polls</span><span class="p">)</span><span class="p">;</span> <span class="nx">idx</span> <span class="p">&lt;</span> <span class="nx">m</span><span class="p">.</span><span class="nx">NumLoops</span><span class="p">;</span> <span class="nx">idx</span><span class="o">++</span> <span class="p">{</span>
+		<span class="cm">/*
+</span><span class="cm">		下面是一个Kqueue的poll
+</span><span class="cm">		
+</span><span class="cm">		func openDefaultPoll() *defaultPoll {
+</span><span class="cm">			l := new(defaultPoll)
+</span><span class="cm">			p, err := syscall.Kqueue()
+</span><span class="cm">			if err != nil {
+</span><span class="cm">				panic(err)
+</span><span class="cm">			}
+</span><span class="cm">			l.fd = p
+</span><span class="cm">			_, err = syscall.Kevent(l.fd, []syscall.Kevent_t{{
+</span><span class="cm">				Ident:  0,
+</span><span class="cm">				Filter: syscall.EVFILT_USER,
+</span><span class="cm">				Flags:  syscall.EV_ADD | syscall.EV_CLEAR,
+</span><span class="cm">			}}, nil, nil)
+</span><span class="cm">			if err != nil {
+</span><span class="cm">				panic(err)
+</span><span class="cm">			}
+</span><span class="cm">			return l
+</span><span class="cm">		}
+</span><span class="cm">		 */</span>
+		<span class="c1">// 默认注册了一个用户自定义事件
+</span><span class="c1"></span>		<span class="kd">var</span> <span class="nx">poll</span> <span class="p">=</span> <span class="nf">openPoll</span><span class="p">(</span><span class="p">)</span>
+		<span class="nx">m</span><span class="p">.</span><span class="nx">polls</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">polls</span><span class="p">,</span> <span class="nx">poll</span><span class="p">)</span>
+		<span class="c1">// 启动一个协程运行Wait方法，里面就是对已经存在的连接的处理逻辑，后面进行分析，首先先看一下连接是如何初始化的
+</span><span class="c1"></span>		<span class="k">go</span> <span class="nx">poll</span><span class="p">.</span><span class="nf">Wait</span><span class="p">(</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// LoadBalance must be set before calling Run, otherwise it will panic.
+</span><span class="c1"></span>	<span class="cm">/*
+</span><span class="cm">	func (b *roundRobinLB) Rebalance(polls []Poll) {
+</span><span class="cm">		b.polls, b.pollSize = polls, len(polls)
+</span><span class="cm">	}
+</span><span class="cm">	 */</span>
+	<span class="c1">// Rebalance 则把balance的polls和pollSize进行重新赋值
+</span><span class="c1"></span>	<span class="nx">m</span><span class="p">.</span><span class="nx">balance</span><span class="p">.</span><span class="nf">Rebalance</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">polls</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到pollmanager是在程序启动时初始化的，主要包含若干个poll，Pick时通过负载均衡返回poll，目前有 轮训/随机 两种方式。
+同时每个poll会开一个线程进行poll的事件监听，暂时先把处理逻辑放下，看一看连接是怎么放入poll中的</p>
+<h2 id="control">Control</h2>
+<p>让我们回到server.Run里，看一看Control的逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Control直接调用了poll的Control逻辑
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">op</span> <span class="o">*</span><span class="nx">FDOperator</span><span class="p">)</span> <span class="nf">Control</span><span class="p">(</span><span class="nx">event</span> <span class="nx">PollEvent</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">op</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Control</span><span class="p">(</span><span class="nx">op</span><span class="p">,</span> <span class="nx">event</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// Control implements Poll.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">defaultPoll</span><span class="p">)</span> <span class="nf">Control</span><span class="p">(</span><span class="nx">operator</span> <span class="o">*</span><span class="nx">FDOperator</span><span class="p">,</span> <span class="nx">event</span> <span class="nx">PollEvent</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">evs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="c1">// 设置Ident为文件描述符
+</span><span class="c1"></span>	<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Ident</span> <span class="p">=</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">)</span>
+	<span class="c1">// Udata是自定义数据，是一个*byte
+</span><span class="c1"></span>	<span class="c1">// 这里的Udata存储的是*FDOperator，所以获取Udata的指针是一个(**FDOperator)的类型，然后获取其值则是*(**FDOperator)
+</span><span class="c1"></span>	<span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="o">*</span><span class="nx">FDOperator</span><span class="p">)</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Udata</span><span class="p">)</span><span class="p">)</span> <span class="p">=</span> <span class="nx">operator</span>
+	<span class="c1">// 定义的事件
+</span><span class="c1"></span>	<span class="cm">/*
+</span><span class="cm">	PollReadable PollEvent = 0x1        // 读
+</span><span class="cm">	PollWritable PollEvent = 0x2        // 写
+</span><span class="cm">	PollDetach PollEvent = 0x3          // 分离
+</span><span class="cm">	PollModReadable PollEvent = 0x4     // 重新注册的读
+</span><span class="cm">	PollR2RW PollEvent = 0x5            // 读变读写
+</span><span class="cm">	PollRW2R PollEvent = 0x6            // 读写变读
+</span><span class="cm">	 */</span>
+	<span class="k">switch</span> <span class="nx">event</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="nx">PollReadable</span><span class="p">,</span> <span class="nx">PollModReadable</span><span class="p">:</span>
+		<span class="c1">// 设置标记位为使用中
+</span><span class="c1"></span>		<span class="cm">/*
+</span><span class="cm">		func (op *FDOperator) inuse() {
+</span><span class="cm">			for !atomic.CompareAndSwapInt32(&amp;op.state, 0, 1) {
+</span><span class="cm">				if atomic.LoadInt32(&amp;op.state) == 1 {
+</span><span class="cm">					return
+</span><span class="cm">				}
+</span><span class="cm">		        // 这里会一直等待设置成功，不成功则暂时挂起，防止for循环一直占用CPU资源
+</span><span class="cm">				runtime.Gosched()
+</span><span class="cm">			}
+</span><span class="cm">		}
+</span><span class="cm">		 */</span>
+		<span class="nx">operator</span><span class="p">.</span><span class="nf">inuse</span><span class="p">(</span><span class="p">)</span>
+		<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span><span class="p">,</span> <span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span>
+	<span class="k">case</span> <span class="nx">PollDetach</span><span class="p">:</span>
+		<span class="c1">// 和inuse差不多，只是在Kevent触发之后进行操作
+</span><span class="c1"></span>		<span class="k">defer</span> <span class="nx">operator</span><span class="p">.</span><span class="nf">unused</span><span class="p">(</span><span class="p">)</span>
+		<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span><span class="p">,</span> <span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_DELETE</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ONESHOT</span>
+	<span class="k">case</span> <span class="nx">PollWritable</span><span class="p">:</span>
+		<span class="nx">operator</span><span class="p">.</span><span class="nf">inuse</span><span class="p">(</span><span class="p">)</span>
+		<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span><span class="p">,</span> <span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_WRITE</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ONESHOT</span>
+	<span class="k">case</span> <span class="nx">PollR2RW</span><span class="p">:</span>
+		<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span><span class="p">,</span> <span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_WRITE</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ADD</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span>
+	<span class="k">case</span> <span class="nx">PollRW2R</span><span class="p">:</span>
+		<span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span><span class="p">,</span> <span class="nx">evs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span> <span class="p">=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_WRITE</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_DELETE</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ONESHOT</span>
+	<span class="p">}</span>
+	<span class="c1">// 根据不同的event进行不同的赋值，然后注册到 Kqueue/Epoll 中
+</span><span class="c1"></span>	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">evs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>这里可以看到，当服务启动的时候，注册的是socketFd的读事件，同时会将整个operator传入到Udata中，下面我们开始分析处理方法</p>
+<h2 id="poolwait">pool.Wait</h2>
+<p>pool.Wait 是进行连接处理的主逻辑</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span><span class="lnt">88
+</span><span class="lnt">89
+</span><span class="lnt">90
+</span><span class="lnt">91
+</span><span class="lnt">92
+</span><span class="lnt">93
+</span><span class="lnt">94
+</span><span class="lnt">95
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Wait implements Poll.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">defaultPoll</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">(</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">// init
+</span><span class="c1"></span>	<span class="c1">// barriercap = 32
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">size</span><span class="p">,</span> <span class="nx">caps</span> <span class="p">=</span> <span class="mi">1024</span><span class="p">,</span> <span class="nx">barriercap</span>
+	<span class="cm">/*
+</span><span class="cm">	type barrier struct {
+</span><span class="cm">		bs  [][]byte
+</span><span class="cm">		ivs []syscall.Iovec // 无拷贝的数据结构
+</span><span class="cm">	}
+</span><span class="cm">	这里的barrier是无拷贝的结构体
+</span><span class="cm">	 */</span>
+	<span class="kd">var</span> <span class="nx">events</span><span class="p">,</span> <span class="nx">barriers</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">barrier</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">barriers</span> <span class="p">{</span>
+		<span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">caps</span><span class="p">)</span>
+		<span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Iovec</span><span class="p">,</span> <span class="nx">caps</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="c1">// wait
+</span><span class="c1"></span>	<span class="k">for</span> <span class="p">{</span>
+		<span class="kd">var</span> <span class="nx">hups</span> <span class="p">[</span><span class="p">]</span><span class="o">*</span><span class="nx">FDOperator</span>
+		<span class="c1">// 监听fd是否有触发
+</span><span class="c1"></span>		<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Kevent</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">events</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
+			<span class="c1">// exit gracefully
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EBADF</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="kc">nil</span>
+			<span class="p">}</span>
+			<span class="k">return</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+			<span class="c1">// trigger
+</span><span class="c1"></span>			<span class="c1">// 如果Ident==0表示用户自定义事件
+</span><span class="c1"></span>			<span class="k">if</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Ident</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+				<span class="c1">// clean trigger
+</span><span class="c1"></span>				<span class="c1">// 清空标记位
+</span><span class="c1"></span>				<span class="nx">atomic</span><span class="p">.</span><span class="nf">StoreUint32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">p</span><span class="p">.</span><span class="nx">trigger</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+				<span class="k">continue</span>
+			<span class="p">}</span>
+			<span class="c1">// 这里会拿到之前存储在Udata中的数据，因为Udata里存储的是*FDOperator，所以Udata的指针是一个**FDOperator，这个上面已经说过
+</span><span class="c1"></span>			<span class="kd">var</span> <span class="nx">operator</span> <span class="p">=</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="o">*</span><span class="nx">FDOperator</span><span class="p">)</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Udata</span><span class="p">)</span><span class="p">)</span>
+			<span class="c1">// 原子操作，检查operator是否在处理其他逻辑
+</span><span class="c1"></span>			<span class="k">if</span> <span class="p">!</span><span class="nx">operator</span><span class="p">.</span><span class="nf">do</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+				<span class="k">continue</span>
+			<span class="p">}</span>
+			<span class="k">switch</span> <span class="p">{</span>
+			<span class="c1">// 如果出现关闭的，则放入hups中等待集中处理，这个在Kqueue的代码中有提到过
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span><span class="o">&amp;</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_EOF</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="nx">hups</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">hups</span><span class="p">,</span> <span class="nx">operator</span><span class="p">)</span>
+            <span class="c1">// 读事件
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_READ</span> <span class="o">&amp;&amp;</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span><span class="o">&amp;</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="c1">// for non-connection
+</span><span class="c1"></span>				<span class="c1">// 这里针对socketFd，调用的是server处注册的onRead，具体下面的方法进行分析
+</span><span class="c1"></span>				<span class="k">if</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">OnRead</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">operator</span><span class="p">.</span><span class="nf">OnRead</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+				<span class="c1">// only for connection
+</span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">bs</span> <span class="p">=</span> <span class="nx">operator</span><span class="p">.</span><span class="nf">Inputs</span><span class="p">(</span><span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">bs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+				<span class="kd">var</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">readv</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span><span class="p">)</span>
+				<span class="nx">operator</span><span class="p">.</span><span class="nf">InputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;readv(fd=%d) failed: %s&#34;</span><span class="p">,</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+					<span class="nx">hups</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">hups</span><span class="p">,</span> <span class="nx">operator</span><span class="p">)</span>
+				<span class="p">}</span>
+            <span class="c1">// 写事件
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_WRITE</span> <span class="o">&amp;&amp;</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span><span class="o">&amp;</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="c1">// for non-connection
+</span><span class="c1"></span>				<span class="k">if</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">OnWrite</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">operator</span><span class="p">.</span><span class="nf">OnWrite</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+				<span class="c1">// only for connection
+</span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">supportZeroCopy</span> <span class="p">=</span> <span class="nx">operator</span><span class="p">.</span><span class="nf">Outputs</span><span class="p">(</span><span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">bs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+					<span class="k">break</span>
+				<span class="p">}</span>
+				<span class="c1">// TODO: Let the upper layer pass in whether to use ZeroCopy.
+</span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">sendmsg</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span><span class="p">,</span> <span class="kc">false</span> <span class="o">&amp;&amp;</span> <span class="nx">supportZeroCopy</span><span class="p">)</span>
+				<span class="nx">operator</span><span class="p">.</span><span class="nf">OutputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;sendmsg(fd=%d) failed: %s&#34;</span><span class="p">,</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+					<span class="nx">hups</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">hups</span><span class="p">,</span> <span class="nx">operator</span><span class="p">)</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+			<span class="nx">operator</span><span class="p">.</span><span class="nf">done</span><span class="p">(</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="c1">// hup conns together to avoid blocking the poll.
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">hups</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+			<span class="nx">p</span><span class="p">.</span><span class="nf">detaches</span><span class="p">(</span><span class="nx">hups</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="onread">onRead</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// OnRead implements FDOperator.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nf">OnRead</span><span class="p">(</span><span class="nx">p</span> <span class="nx">Poll</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="c1">// accept socket
+</span><span class="c1"></span>    <span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="nf">Accept</span><span class="p">(</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="c1">// shut down
+</span><span class="c1"></span>        <span class="c1">// socketFD出现错误 
+</span><span class="c1"></span>        <span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="s">&#34;closed&#34;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 关闭时，会通过Control关闭注册在poll的事件
+</span><span class="c1"></span>            <span class="nx">s</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nf">Control</span><span class="p">(</span><span class="nx">PollDetach</span><span class="p">)</span>
+            <span class="nx">s</span><span class="p">.</span><span class="nf">quit</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nx">err</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;accept conn failed:&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nx">err</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">conn</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="c1">// store &amp; register connection
+</span><span class="c1"></span>    <span class="c1">// 保存连接信息
+</span><span class="c1"></span>    <span class="kd">var</span> <span class="nx">connection</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">connection</span><span class="p">{</span><span class="p">}</span>
+    <span class="c1">// 初始化连接，会调用之前server注册的prepare
+</span><span class="c1"></span>    <span class="c1">// init 方法见下面
+</span><span class="c1"></span>    <span class="nx">connection</span><span class="p">.</span><span class="nf">init</span><span class="p">(</span><span class="nx">conn</span><span class="p">.</span><span class="p">(</span><span class="nx">Conn</span><span class="p">)</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">prepare</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">!</span><span class="nx">connection</span><span class="p">.</span><span class="nf">IsActive</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="kd">var</span> <span class="nx">fd</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="p">(</span><span class="nx">Conn</span><span class="p">)</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nf">AddCloseCallback</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">connection</span> <span class="nx">Connection</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+        <span class="nx">s</span><span class="p">.</span><span class="nx">connections</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+    <span class="p">}</span><span class="p">)</span>
+    <span class="nx">s</span><span class="p">.</span><span class="nx">connections</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">connection</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="c1">// init arguments: conn is required, prepare is optional.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">connection</span><span class="p">)</span> <span class="nf">init</span><span class="p">(</span><span class="nx">conn</span> <span class="nx">Conn</span><span class="p">,</span> <span class="nx">prepare</span> <span class="nx">OnPrepare</span><span class="p">)</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// conn must be *netFD{}
+</span><span class="c1"></span>	<span class="c1">// 检测conn是一个*netFD类型
+</span><span class="c1"></span>	<span class="c1">// 同时会将c.netFD进行赋值
+</span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nf">checkNetFD</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
+
+	<span class="c1">// 初始化FD，主要初始化c.operator，具体内容看下面的方法
+</span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nf">initFDOperator</span><span class="p">(</span><span class="p">)</span>
+	<span class="c1">// 设置为非阻塞
+</span><span class="c1"></span>	<span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+
+	<span class="c1">// init buffer, barrier, finalizer
+</span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nx">readTrigger</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBuffer</span> <span class="p">=</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="nx">pagesize</span><span class="p">)</span><span class="p">,</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="p">)</span>
+	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBarrier</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBarrier</span> <span class="p">=</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span><span class="p">,</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span>
+	<span class="nx">c</span><span class="p">.</span><span class="nf">setFinalizer</span><span class="p">(</span><span class="p">)</span>
+
+	<span class="c1">// check zero-copy
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nf">setZeroCopy</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nf">setBlockZeroCopySend</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">defaultZeroCopyTimeoutSec</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">c</span><span class="p">.</span><span class="nx">supportZeroCopy</span> <span class="p">=</span> <span class="kc">true</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">c</span><span class="p">.</span><span class="nf">onPrepare</span><span class="p">(</span><span class="nx">prepare</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">connection</span><span class="p">)</span> <span class="nf">initFDOperator</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">op</span> <span class="o">:=</span> <span class="nf">allocop</span><span class="p">(</span><span class="p">)</span>
+	<span class="nx">op</span><span class="p">.</span><span class="nx">FD</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">fd</span>
+	<span class="nx">op</span><span class="p">.</span><span class="nx">OnRead</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OnWrite</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OnHup</span> <span class="p">=</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">onHup</span>
+	<span class="nx">op</span><span class="p">.</span><span class="nx">Inputs</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">InputAck</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">inputs</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">inputAck</span>
+	<span class="nx">op</span><span class="p">.</span><span class="nx">Outputs</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OutputAck</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputs</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputAck</span>
+
+	<span class="c1">// if connection has been registered, must reuse poll here.
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">operator</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">op</span><span class="p">.</span><span class="nx">poll</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nx">poll</span>
+	<span class="p">}</span>
+	<span class="nx">c</span><span class="p">.</span><span class="nx">operator</span> <span class="p">=</span> <span class="nx">op</span>
+<span class="p">}</span>
+</code></pre></td></tr></table>
+</div>
+</div>
     </div>
 
     <div class="post-copyright">
