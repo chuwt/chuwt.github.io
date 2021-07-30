@@ -49,7 +49,7 @@
 <meta itemprop="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque">
 <meta itemprop="datePublished" content="2021-07-26T00:00:00&#43;00:00" />
 <meta itemprop="dateModified" content="2021-07-26T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="3829">
+<meta itemprop="wordCount" content="4061">
 
 
 
@@ -137,8 +137,8 @@
       <div class="post-meta">
         <span class="post-time"> 2021-07-26 </span>
         
-          <span class="more-meta"> 约 3829 字 </span>
-          <span class="more-meta"> 预计阅读 8 分钟 </span>
+          <span class="more-meta"> 约 4061 字 </span>
+          <span class="more-meta"> 预计阅读 9 分钟 </span>
         
       </div>
     </header>
@@ -160,6 +160,7 @@
         <li><a href="#control">Control</a></li>
         <li><a href="#poolwait">pool.Wait</a></li>
         <li><a href="#onread">onRead</a></li>
+        <li><a href="#heading-2">分享</a></li>
       </ul>
     </li>
   </ul>
@@ -966,6 +967,7 @@ poll又是如何创建的</p>
 </span><span class="lnt">93
 </span><span class="lnt">94
 </span><span class="lnt">95
+</span><span class="lnt">96
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Wait implements Poll.
@@ -980,7 +982,8 @@ poll又是如何创建的</p>
 </span><span class="cm">	}
 </span><span class="cm">	这里的barrier是无拷贝的结构体
 </span><span class="cm">	 */</span>
-	<span class="kd">var</span> <span class="nx">events</span><span class="p">,</span> <span class="nx">barriers</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">barrier</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span>
+	<span class="c1">// 最多1024个events同时触发
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">events</span><span class="p">,</span> <span class="nx">barriers</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">barrier</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span>
 	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">barriers</span> <span class="p">{</span>
 		<span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="p">[</span><span class="p">]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">caps</span><span class="p">)</span>
 		<span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Iovec</span><span class="p">,</span> <span class="nx">caps</span><span class="p">)</span>
@@ -1129,6 +1132,21 @@ poll又是如何创建的</p>
 </span><span class="lnt">59
 </span><span class="lnt">60
 </span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// OnRead implements FDOperator.
@@ -1160,11 +1178,13 @@ poll又是如何创建的</p>
         <span class="k">return</span> <span class="kc">nil</span>
     <span class="p">}</span>
     <span class="kd">var</span> <span class="nx">fd</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="p">(</span><span class="nx">Conn</span><span class="p">)</span><span class="p">.</span><span class="nf">Fd</span><span class="p">(</span><span class="p">)</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nf">AddCloseCallback</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">connection</span> <span class="nx">Connection</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="c1">// 添加回调
+</span><span class="c1"></span>    <span class="nx">connection</span><span class="p">.</span><span class="nf">AddCloseCallback</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">connection</span> <span class="nx">Connection</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
         <span class="nx">s</span><span class="p">.</span><span class="nx">connections</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">nil</span>
     <span class="p">}</span><span class="p">)</span>
-    <span class="nx">s</span><span class="p">.</span><span class="nx">connections</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">connection</span><span class="p">)</span>
+    <span class="c1">// 将连接保存
+</span><span class="c1"></span>    <span class="nx">s</span><span class="p">.</span><span class="nx">connections</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">connection</span><span class="p">)</span>
     <span class="k">return</span> <span class="kc">nil</span>
 <span class="p">}</span>
 
@@ -1175,58 +1195,43 @@ poll又是如何创建的</p>
 </span><span class="c1"></span>	<span class="c1">// 同时会将c.netFD进行赋值
 </span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nf">checkNetFD</span><span class="p">(</span><span class="nx">conn</span><span class="p">)</span>
 
-	<span class="c1">// 初始化FD，主要初始化c.operator，具体内容看下面的方法
+	<span class="c1">// 初始化FD，主要初始化c.operator，
 </span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nf">initFDOperator</span><span class="p">(</span><span class="p">)</span>
 	<span class="c1">// 设置为非阻塞
 </span><span class="c1"></span>	<span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
 
 	<span class="c1">// init buffer, barrier, finalizer
 </span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nx">readTrigger</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBuffer</span> <span class="p">=</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="nx">pagesize</span><span class="p">)</span><span class="p">,</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="p">)</span>
-	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBarrier</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBarrier</span> <span class="p">=</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span><span class="p">,</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span>
+	<span class="c1">// 创建[]byte buffer
+</span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBuffer</span> <span class="p">=</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="nx">pagesize</span><span class="p">)</span><span class="p">,</span> <span class="nf">NewLinkBuffer</span><span class="p">(</span><span class="p">)</span>
+	<span class="c1">// 创建barrier（无拷贝）
+</span><span class="c1"></span>	<span class="nx">c</span><span class="p">.</span><span class="nx">inputBarrier</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputBarrier</span> <span class="p">=</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span><span class="p">,</span> <span class="nx">barrierPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="p">)</span><span class="p">.</span><span class="p">(</span><span class="o">*</span><span class="nx">barrier</span><span class="p">)</span>
 	<span class="nx">c</span><span class="p">.</span><span class="nf">setFinalizer</span><span class="p">(</span><span class="p">)</span>
 
 	<span class="c1">// check zero-copy
+</span><span class="c1"></span>	<span class="c1">// setZeroCopy 会调用syscall.SetsockoptInt设置socket opt
+</span><span class="c1"></span>	<span class="cm">/*
+</span><span class="cm">	func setZeroCopy(fd int) error {
+</span><span class="cm">	    // 第一个参数是fd，第二个参数是level，如果要设置，必须为SOL_SOCKET，第三个参数是name，第四个参数是value
+</span><span class="cm">		return syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, SO_ZEROCOPY, 1)
+</span><span class="cm">	}
+</span><span class="cm">	 */</span>
+	<span class="c1">// 关于0拷贝的文章，可以看最后面的参考
+</span><span class="c1"></span>	<span class="c1">// setBlockZeroCopySend 设置超时时间
+</span><span class="c1"></span>	<span class="c1">// 当前只有linux使用0拷贝，freebsd/darwin 则不使用
 </span><span class="c1"></span>	<span class="k">if</span> <span class="nf">setZeroCopy</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nf">setBlockZeroCopySend</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">defaultZeroCopyTimeoutSec</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
 		<span class="nx">c</span><span class="p">.</span><span class="nx">supportZeroCopy</span> <span class="p">=</span> <span class="kc">true</span>
 	<span class="p">}</span>
-	<span class="k">return</span> <span class="nx">c</span><span class="p">.</span><span class="nf">onPrepare</span><span class="p">(</span><span class="nx">prepare</span><span class="p">)</span>
+	<span class="c1">// 调用prepare方法，然后从pollmanager中获取一个poll，然后调用pool.Control
+</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">c</span><span class="p">.</span><span class="nf">onPrepare</span><span class="p">(</span><span class="nx">prepare</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">connection</span><span class="p">)</span> <span class="nf">initFDOperator</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">op</span> <span class="o">:=</span> <span class="nf">allocop</span><span class="p">(</span><span class="p">)</span>
-	<span class="nx">op</span><span class="p">.</span><span class="nx">FD</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">fd</span>
-	<span class="nx">op</span><span class="p">.</span><span class="nx">OnRead</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OnWrite</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OnHup</span> <span class="p">=</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">onHup</span>
-	<span class="nx">op</span><span class="p">.</span><span class="nx">Inputs</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">InputAck</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">inputs</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">inputAck</span>
-	<span class="nx">op</span><span class="p">.</span><span class="nx">Outputs</span><span class="p">,</span> <span class="nx">op</span><span class="p">.</span><span class="nx">OutputAck</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputs</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">outputAck</span>
+</div><h2 id="heading-2">分享</h2>
+<ul>
+<li><a href="https://zhuanlan.zhihu.com/p/308054212">Linux I/O 原理和 Zero-copy 技术全面揭秘</a></li>
+</ul>
 
-	<span class="c1">// if connection has been registered, must reuse poll here.
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">operator</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">op</span><span class="p">.</span><span class="nx">poll</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">operator</span><span class="p">.</span><span class="nx">poll</span>
-	<span class="p">}</span>
-	<span class="nx">c</span><span class="p">.</span><span class="nx">operator</span> <span class="p">=</span> <span class="nx">op</span>
-<span class="p">}</span>
-</code></pre></td></tr></table>
-</div>
-</div>
     </div>
 
     <div class="post-copyright">

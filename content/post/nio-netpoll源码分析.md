@@ -388,6 +388,7 @@ func (p *defaultPoll) Wait() error {
 	}
 	这里的barrier是无拷贝的结构体
 	 */
+	// 最多1024个events同时触发
 	var events, barriers = make([]syscall.Kevent_t, size), make([]barrier, size)
 	for i := range barriers {
 		barriers[i].bs = make([][]byte, caps)
@@ -504,10 +505,12 @@ func (s *server) OnRead(p Poll) error {
         return nil
     }
     var fd = conn.(Conn).Fd()
+    // 添加回调
     connection.AddCloseCallback(func(connection Connection) error {
         s.connections.Delete(fd)
         return nil
     })
+    // 将连接保存
     s.connections.Store(fd, connection)
     return nil
 }
@@ -519,37 +522,37 @@ func (c *connection) init(conn Conn, prepare OnPrepare) (err error) {
 	// 同时会将c.netFD进行赋值
 	c.checkNetFD(conn)
 
-	// 初始化FD，主要初始化c.operator，具体内容看下面的方法
+	// 初始化FD，主要初始化c.operator，
 	c.initFDOperator()
 	// 设置为非阻塞
 	syscall.SetNonblock(c.fd, true)
 
 	// init buffer, barrier, finalizer
 	c.readTrigger = make(chan int, 1)
+	// 创建[]byte buffer
 	c.inputBuffer, c.outputBuffer = NewLinkBuffer(pagesize), NewLinkBuffer()
+	// 创建barrier（无拷贝）
 	c.inputBarrier, c.outputBarrier = barrierPool.Get().(*barrier), barrierPool.Get().(*barrier)
 	c.setFinalizer()
 
 	// check zero-copy
+	// setZeroCopy 会调用syscall.SetsockoptInt设置socket opt
+	/*
+	func setZeroCopy(fd int) error {
+	    // 第一个参数是fd，第二个参数是level，如果要设置，必须为SOL_SOCKET，第三个参数是name，第四个参数是value
+		return syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, SO_ZEROCOPY, 1)
+	}
+	 */
+	// 关于0拷贝的文章，可以看最后面的参考
+	// setBlockZeroCopySend 设置超时时间
+	// 当前只有linux使用0拷贝，freebsd/darwin 则不使用
 	if setZeroCopy(c.fd) == nil && setBlockZeroCopySend(c.fd, defaultZeroCopyTimeoutSec, 0) == nil {
 		c.supportZeroCopy = true
 	}
+	// 调用prepare方法，然后从pollmanager中获取一个poll，然后调用pool.Control
 	return c.onPrepare(prepare)
 }
 ```
 
-```go
-func (c *connection) initFDOperator() {
-	op := allocop()
-	op.FD = c.fd
-	op.OnRead, op.OnWrite, op.OnHup = nil, nil, c.onHup
-	op.Inputs, op.InputAck = c.inputs, c.inputAck
-	op.Outputs, op.OutputAck = c.outputs, c.outputAck
-
-	// if connection has been registered, must reuse poll here.
-	if c.pd != nil && c.pd.operator != nil {
-		op.poll = c.pd.operator.poll
-	}
-	c.operator = op
-}
-```
+## 分享
+- [Linux I/O 原理和 Zero-copy 技术全面揭秘](https://zhuanlan.zhihu.com/p/308054212)
