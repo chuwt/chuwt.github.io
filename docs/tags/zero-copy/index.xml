@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>netpoll on chuwt&#39;s blog</title>
-    <link>https://chuwt.github.io/tags/netpoll/</link>
-    <description>Recent content in netpoll on chuwt&#39;s blog</description>
+    <title>zero-copy on chuwt&#39;s blog</title>
+    <link>https://chuwt.github.io/tags/zero-copy/</link>
+    <description>Recent content in zero-copy on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Mon, 26 Jul 2021 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="https://chuwt.github.io/tags/netpoll/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://chuwt.github.io/tags/zero-copy/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>NIO-netpoll源码分析 WIP</title>
+      <title>NIO-netpoll源码分析</title>
       <link>https://chuwt.github.io/post/nio-netpoll%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
       <pubDate>Mon, 26 Jul 2021 00:00:00 +0000</pubDate>
       

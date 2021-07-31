@@ -1,9 +1,9 @@
 ---
-title: "NIO-netpoll源码分析 WIP"
+title: "NIO-netpoll源码分析"
 date: 2021-07-26
 lastmod: 2021-07-26
 draft: false
-tags: ["nio", "net", "golang", "netpoll"]
+tags: ["nio", "golang", "zero-copy"]
 
 toc: true
 
@@ -384,9 +384,8 @@ func (p *defaultPoll) Wait() error {
 	/*
 	type barrier struct {
 		bs  [][]byte
-		ivs []syscall.Iovec // 无拷贝的数据结构
+		ivs []syscall.Iovec // io向量，用于readv和writev，用于多个不连续数据通过一次系统调用写入内核
 	}
-	这里的barrier是无拷贝的结构体
 	 */
 	// 最多1024个events同时触发
 	var events, barriers = make([]syscall.Kevent_t, size), make([]barrier, size)
@@ -434,11 +433,48 @@ func (p *defaultPoll) Wait() error {
 					break
 				}
 				// only for connection
+				/*
+				// inputs implements FDOperator.
+				func (c *connection) inputs(vs [][]byte) (rs [][]byte) {
+				    // cas是否可读，不可读则结束本次操作
+					if !c.lock(reading) {
+						return rs
+					}
+
+					n := int(atomic.LoadInt32(&c.waitReadSize))
+					if n <= pagesize {
+						return c.inputBuffer.Book(pagesize, vs)
+					}
+
+					n -= c.inputBuffer.Len()
+					if n < pagesize {
+						n = pagesize
+					}
+					return c.inputBuffer.Book(n, vs)
+				}
+				 */
+				// 获取一个读缓存
 				var bs = operator.Inputs(barriers[i].bs)
 				if len(bs) == 0 {
 					break
 				}
+				// 系统调用readv，读取内容到ivs中，readv与read的区别是readv读可以将读到的数据放入多个不连续的缓存中（iovec）
 				var n, err = readv(operator.FD, bs, barriers[i].ivs)
+				/*
+				// inputAck implements FDOperator.
+				func (c *connection) inputAck(n int) (err error) {
+					if n < 0 {
+						n = 0
+					}
+					lack := atomic.AddInt32(&c.waitReadSize, int32(-n))
+					err = c.inputBuffer.BookAck(n, lack <= 0)
+					c.unlock(reading)
+					c.triggerRead()
+					c.onRequest()
+					return err
+				}
+				 */
+				// 触发读取，然后会开一个线程处理之前定义的onRequest
 				operator.InputAck(n)
 				if err != nil && err != syscall.EAGAIN && err != syscall.EINTR {
 					log.Printf("readv(fd=%d) failed: %s", operator.FD, err.Error())
@@ -447,17 +483,21 @@ func (p *defaultPoll) Wait() error {
             // 写事件
 			case events[i].Filter == syscall.EVFILT_WRITE && events[i].Flags&syscall.EV_ENABLE != 0:
 				// for non-connection
+                // 针对socket
 				if operator.OnWrite != nil {
 					operator.OnWrite(p)
 					break
 				}
 				// only for connection
+				// 返回写的数据和是否使用零拷贝
 				var bs, supportZeroCopy = operator.Outputs(barriers[i].bs)
 				if len(bs) == 0 {
 					break
 				}
 				// TODO: Let the upper layer pass in whether to use ZeroCopy.
+				// 发送数据
 				var n, err = sendmsg(operator.FD, bs, barriers[i].ivs, false && supportZeroCopy)
+                // 等待数据发送完成，然后释放缓存
 				operator.OutputAck(n)
 				if err != nil && err != syscall.EAGAIN {
 					log.Printf("sendmsg(fd=%d) failed: %s", operator.FD, err.Error())
@@ -546,6 +586,7 @@ func (c *connection) init(conn Conn, prepare OnPrepare) (err error) {
 	// 关于0拷贝的文章，可以看最后面的参考
 	// setBlockZeroCopySend 设置超时时间
 	// 当前只有linux使用0拷贝，freebsd/darwin 则不使用
+	// 另外MSG_ZEROCOPY的方式只用于send数据
 	if setZeroCopy(c.fd) == nil && setBlockZeroCopySend(c.fd, defaultZeroCopyTimeoutSec, 0) == nil {
 		c.supportZeroCopy = true
 	}
@@ -553,6 +594,11 @@ func (c *connection) init(conn Conn, prepare OnPrepare) (err error) {
 	return c.onPrepare(prepare)
 }
 ```
+## 总结
+字节跳动开源的netpoll底层相较于evio来说，主要优化了数据的读取与发送，同时使用线程池来处理用户逻辑，
+难度主要集中在零拷贝和读写处理上。本次分析这块的细节没有好好了解，有时间再细品。
 
-## 分享
+## 题外分享
 - [Linux I/O 原理和 Zero-copy 技术全面揭秘](https://zhuanlan.zhihu.com/p/308054212)
+- [原来 8 张图，就可以搞懂「零拷贝」了](https://www.cnblogs.com/xiaolincoding/p/13719610.html)
+- [Linux Socket 0拷贝特性](https://zhuanlan.zhihu.com/p/28575308)

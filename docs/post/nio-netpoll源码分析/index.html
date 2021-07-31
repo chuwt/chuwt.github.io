@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>NIO-netpoll源码分析 WIP - chuwt&#39;s blog</title>
+  <title>NIO-netpoll源码分析 - chuwt&#39;s blog</title>
   <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 
@@ -39,22 +39,22 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
-<meta property="og:title" content="NIO-netpoll源码分析 WIP" />
+<meta property="og:title" content="NIO-netpoll源码分析" />
 <meta property="og:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://chuwt.github.io/post/nio-netpoll%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" />
 <meta property="article:published_time" content="2021-07-26T00:00:00+00:00" />
 <meta property="article:modified_time" content="2021-07-26T00:00:00+00:00" />
-<meta itemprop="name" content="NIO-netpoll源码分析 WIP">
+<meta itemprop="name" content="NIO-netpoll源码分析">
 <meta itemprop="description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque">
 <meta itemprop="datePublished" content="2021-07-26T00:00:00&#43;00:00" />
 <meta itemprop="dateModified" content="2021-07-26T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="4061">
+<meta itemprop="wordCount" content="4523">
 
 
 
-<meta itemprop="keywords" content="nio,net,golang,netpoll," /><meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="NIO-netpoll源码分析 WIP"/>
+<meta itemprop="keywords" content="nio,golang,zero-copy," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="NIO-netpoll源码分析"/>
 <meta name="twitter:description" content="开始之前 上一篇我们讲了一个evio，这节我们来看一看字节跳动开源的高性能nio库，netpoll 由于使用mac，所以下面的分析主要以Kque"/>
 
 <!--[if lte IE 9]>
@@ -132,13 +132,13 @@
           <article class="post">
     
     <header class="post-header">
-      <h1 class="post-title">NIO-netpoll源码分析 WIP</h1>
+      <h1 class="post-title">NIO-netpoll源码分析</h1>
 
       <div class="post-meta">
         <span class="post-time"> 2021-07-26 </span>
         
-          <span class="more-meta"> 约 4061 字 </span>
-          <span class="more-meta"> 预计阅读 9 分钟 </span>
+          <span class="more-meta"> 约 4523 字 </span>
+          <span class="more-meta"> 预计阅读 10 分钟 </span>
         
       </div>
     </header>
@@ -160,7 +160,8 @@
         <li><a href="#control">Control</a></li>
         <li><a href="#poolwait">pool.Wait</a></li>
         <li><a href="#onread">onRead</a></li>
-        <li><a href="#heading-2">分享</a></li>
+        <li><a href="#heading-2">总结</a></li>
+        <li><a href="#heading-3">题外分享</a></li>
       </ul>
     </li>
   </ul>
@@ -872,102 +873,142 @@ poll又是如何创建的</p>
 <p>pool.Wait 是进行连接处理的主逻辑</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span><span class="lnt">14
-</span><span class="lnt">15
-</span><span class="lnt">16
-</span><span class="lnt">17
-</span><span class="lnt">18
-</span><span class="lnt">19
-</span><span class="lnt">20
-</span><span class="lnt">21
-</span><span class="lnt">22
-</span><span class="lnt">23
-</span><span class="lnt">24
-</span><span class="lnt">25
-</span><span class="lnt">26
-</span><span class="lnt">27
-</span><span class="lnt">28
-</span><span class="lnt">29
-</span><span class="lnt">30
-</span><span class="lnt">31
-</span><span class="lnt">32
-</span><span class="lnt">33
-</span><span class="lnt">34
-</span><span class="lnt">35
-</span><span class="lnt">36
-</span><span class="lnt">37
-</span><span class="lnt">38
-</span><span class="lnt">39
-</span><span class="lnt">40
-</span><span class="lnt">41
-</span><span class="lnt">42
-</span><span class="lnt">43
-</span><span class="lnt">44
-</span><span class="lnt">45
-</span><span class="lnt">46
-</span><span class="lnt">47
-</span><span class="lnt">48
-</span><span class="lnt">49
-</span><span class="lnt">50
-</span><span class="lnt">51
-</span><span class="lnt">52
-</span><span class="lnt">53
-</span><span class="lnt">54
-</span><span class="lnt">55
-</span><span class="lnt">56
-</span><span class="lnt">57
-</span><span class="lnt">58
-</span><span class="lnt">59
-</span><span class="lnt">60
-</span><span class="lnt">61
-</span><span class="lnt">62
-</span><span class="lnt">63
-</span><span class="lnt">64
-</span><span class="lnt">65
-</span><span class="lnt">66
-</span><span class="lnt">67
-</span><span class="lnt">68
-</span><span class="lnt">69
-</span><span class="lnt">70
-</span><span class="lnt">71
-</span><span class="lnt">72
-</span><span class="lnt">73
-</span><span class="lnt">74
-</span><span class="lnt">75
-</span><span class="lnt">76
-</span><span class="lnt">77
-</span><span class="lnt">78
-</span><span class="lnt">79
-</span><span class="lnt">80
-</span><span class="lnt">81
-</span><span class="lnt">82
-</span><span class="lnt">83
-</span><span class="lnt">84
-</span><span class="lnt">85
-</span><span class="lnt">86
-</span><span class="lnt">87
-</span><span class="lnt">88
-</span><span class="lnt">89
-</span><span class="lnt">90
-</span><span class="lnt">91
-</span><span class="lnt">92
-</span><span class="lnt">93
-</span><span class="lnt">94
-</span><span class="lnt">95
-</span><span class="lnt">96
+<pre class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Wait implements Poll.
@@ -978,9 +1019,8 @@ poll又是如何创建的</p>
 	<span class="cm">/*
 </span><span class="cm">	type barrier struct {
 </span><span class="cm">		bs  [][]byte
-</span><span class="cm">		ivs []syscall.Iovec // 无拷贝的数据结构
+</span><span class="cm">		ivs []syscall.Iovec // io向量，用于readv和writev，用于多个不连续数据通过一次系统调用写入内核
 </span><span class="cm">	}
-</span><span class="cm">	这里的barrier是无拷贝的结构体
 </span><span class="cm">	 */</span>
 	<span class="c1">// 最多1024个events同时触发
 </span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">events</span><span class="p">,</span> <span class="nx">barriers</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">Kevent_t</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="p">[</span><span class="p">]</span><span class="nx">barrier</span><span class="p">,</span> <span class="nx">size</span><span class="p">)</span>
@@ -1028,12 +1068,49 @@ poll又是如何创建的</p>
 					<span class="k">break</span>
 				<span class="p">}</span>
 				<span class="c1">// only for connection
+</span><span class="c1"></span>				<span class="cm">/*
+</span><span class="cm">				// inputs implements FDOperator.
+</span><span class="cm">				func (c *connection) inputs(vs [][]byte) (rs [][]byte) {
+</span><span class="cm">				    // cas是否可读，不可读则结束本次操作
+</span><span class="cm">					if !c.lock(reading) {
+</span><span class="cm">						return rs
+</span><span class="cm">					}
+</span><span class="cm">
+</span><span class="cm">					n := int(atomic.LoadInt32(&amp;c.waitReadSize))
+</span><span class="cm">					if n &lt;= pagesize {
+</span><span class="cm">						return c.inputBuffer.Book(pagesize, vs)
+</span><span class="cm">					}
+</span><span class="cm">
+</span><span class="cm">					n -= c.inputBuffer.Len()
+</span><span class="cm">					if n &lt; pagesize {
+</span><span class="cm">						n = pagesize
+</span><span class="cm">					}
+</span><span class="cm">					return c.inputBuffer.Book(n, vs)
+</span><span class="cm">				}
+</span><span class="cm">				 */</span>
+				<span class="c1">// 获取一个读缓存
 </span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">bs</span> <span class="p">=</span> <span class="nx">operator</span><span class="p">.</span><span class="nf">Inputs</span><span class="p">(</span><span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span><span class="p">)</span>
 				<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">bs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
 					<span class="k">break</span>
 				<span class="p">}</span>
-				<span class="kd">var</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">readv</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span><span class="p">)</span>
-				<span class="nx">operator</span><span class="p">.</span><span class="nf">InputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+				<span class="c1">// 系统调用readv，读取内容到ivs中，readv与read的区别是readv读可以将读到的数据放入多个不连续的缓存中（iovec）
+</span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">readv</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span><span class="p">)</span>
+				<span class="cm">/*
+</span><span class="cm">				// inputAck implements FDOperator.
+</span><span class="cm">				func (c *connection) inputAck(n int) (err error) {
+</span><span class="cm">					if n &lt; 0 {
+</span><span class="cm">						n = 0
+</span><span class="cm">					}
+</span><span class="cm">					lack := atomic.AddInt32(&amp;c.waitReadSize, int32(-n))
+</span><span class="cm">					err = c.inputBuffer.BookAck(n, lack &lt;= 0)
+</span><span class="cm">					c.unlock(reading)
+</span><span class="cm">					c.triggerRead()
+</span><span class="cm">					c.onRequest()
+</span><span class="cm">					return err
+</span><span class="cm">				}
+</span><span class="cm">				 */</span>
+				<span class="c1">// 触发读取，然后会开一个线程处理之前定义的onRequest
+</span><span class="c1"></span>				<span class="nx">operator</span><span class="p">.</span><span class="nf">InputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
 				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
 					<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;readv(fd=%d) failed: %s&#34;</span><span class="p">,</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
 					<span class="nx">hups</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">hups</span><span class="p">,</span> <span class="nx">operator</span><span class="p">)</span>
@@ -1041,18 +1118,22 @@ poll又是如何创建的</p>
             <span class="c1">// 写事件
 </span><span class="c1"></span>			<span class="k">case</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Filter</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EVFILT_WRITE</span> <span class="o">&amp;&amp;</span> <span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">Flags</span><span class="o">&amp;</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EV_ENABLE</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
 				<span class="c1">// for non-connection
+</span><span class="c1"></span>                <span class="c1">// 针对socket
 </span><span class="c1"></span>				<span class="k">if</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">OnWrite</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 					<span class="nx">operator</span><span class="p">.</span><span class="nf">OnWrite</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
 					<span class="k">break</span>
 				<span class="p">}</span>
 				<span class="c1">// only for connection
+</span><span class="c1"></span>				<span class="c1">// 返回写的数据和是否使用零拷贝
 </span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">supportZeroCopy</span> <span class="p">=</span> <span class="nx">operator</span><span class="p">.</span><span class="nf">Outputs</span><span class="p">(</span><span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">bs</span><span class="p">)</span>
 				<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">bs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
 					<span class="k">break</span>
 				<span class="p">}</span>
 				<span class="c1">// TODO: Let the upper layer pass in whether to use ZeroCopy.
+</span><span class="c1"></span>				<span class="c1">// 发送数据
 </span><span class="c1"></span>				<span class="kd">var</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">sendmsg</span><span class="p">(</span><span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">bs</span><span class="p">,</span> <span class="nx">barriers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="p">.</span><span class="nx">ivs</span><span class="p">,</span> <span class="kc">false</span> <span class="o">&amp;&amp;</span> <span class="nx">supportZeroCopy</span><span class="p">)</span>
-				<span class="nx">operator</span><span class="p">.</span><span class="nf">OutputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+                <span class="c1">// 等待数据发送完成，然后释放缓存
+</span><span class="c1"></span>				<span class="nx">operator</span><span class="p">.</span><span class="nf">OutputAck</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
 				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
 					<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;sendmsg(fd=%d) failed: %s&#34;</span><span class="p">,</span> <span class="nx">operator</span><span class="p">.</span><span class="nx">FD</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="p">)</span><span class="p">)</span>
 					<span class="nx">hups</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">hups</span><span class="p">,</span> <span class="nx">operator</span><span class="p">)</span>
@@ -1147,6 +1228,7 @@ poll又是如何创建的</p>
 </span><span class="lnt">74
 </span><span class="lnt">75
 </span><span class="lnt">76
+</span><span class="lnt">77
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// OnRead implements FDOperator.
@@ -1219,6 +1301,7 @@ poll又是如何创建的</p>
 	<span class="c1">// 关于0拷贝的文章，可以看最后面的参考
 </span><span class="c1"></span>	<span class="c1">// setBlockZeroCopySend 设置超时时间
 </span><span class="c1"></span>	<span class="c1">// 当前只有linux使用0拷贝，freebsd/darwin 则不使用
+</span><span class="c1"></span>	<span class="c1">// 另外MSG_ZEROCOPY的方式只用于send数据
 </span><span class="c1"></span>	<span class="k">if</span> <span class="nf">setZeroCopy</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nf">setBlockZeroCopySend</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">defaultZeroCopyTimeoutSec</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
 		<span class="nx">c</span><span class="p">.</span><span class="nx">supportZeroCopy</span> <span class="p">=</span> <span class="kc">true</span>
 	<span class="p">}</span>
@@ -1227,9 +1310,14 @@ poll又是如何创建的</p>
 <span class="p">}</span>
 </code></pre></td></tr></table>
 </div>
-</div><h2 id="heading-2">分享</h2>
+</div><h2 id="heading-2">总结</h2>
+<p>字节跳动开源的netpoll底层相较于evio来说，主要优化了数据的读取与发送，同时使用线程池来处理用户逻辑，
+难度主要集中在零拷贝和读写处理上。本次分析这块的细节没有好好了解，有时间再细品。</p>
+<h2 id="heading-3">题外分享</h2>
 <ul>
 <li><a href="https://zhuanlan.zhihu.com/p/308054212">Linux I/O 原理和 Zero-copy 技术全面揭秘</a></li>
+<li><a href="https://www.cnblogs.com/xiaolincoding/p/13719610.html">原来 8 张图，就可以搞懂「零拷贝」了</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/28575308">Linux Socket 0拷贝特性</a></li>
 </ul>
 
     </div>
@@ -1252,9 +1340,8 @@ poll又是如何创建的</p>
 <footer class="post-footer">
       <div class="post-tags">
           <a href="/tags/nio/">nio</a>
-          <a href="/tags/net/">net</a>
           <a href="/tags/golang/">golang</a>
-          <a href="/tags/netpoll/">netpoll</a>
+          <a href="/tags/zero-copy/">zero-copy</a>
           </div>
       <nav class="post-nav">
         
