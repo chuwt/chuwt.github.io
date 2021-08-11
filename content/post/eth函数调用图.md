@@ -8,7 +8,7 @@ tags: ["eth", "blockchain", "Go"]
 toc: true
 
 ---
-## 说明
-画了一个ETH函数调用图，简单看看，很多细节没画😂
+
+画了一个简单的ETH函数调用图，很多细节没画😂，红色表示存在细节没画的地方，凑合看看
 
 ![https://github.com/chuwt/chuwt.github.io/blob/master/img/eth_func.jpeg?raw=true](https://github.com/chuwt/chuwt.github.io/blob/master/img/eth_func.jpeg?raw=true)
