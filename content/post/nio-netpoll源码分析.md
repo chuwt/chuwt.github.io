@@ -3,7 +3,7 @@ title: "NIO-netpoll源码分析"
 date: 2021-07-26
 lastmod: 2021-07-26
 draft: false
-tags: ["nio", "golang", "zero-copy"]
+tags: ["nio", "Go", "zero-copy"]
 
 toc: true
 

@@ -3,7 +3,7 @@ title: "NIO-evio源码分析"
 date: 2021-07-17
 lastmod: 2021-07-26
 draft: false
-tags: ["nio", "net", "golang", "evio"]
+tags: ["nio", "net", "Go", "evio"]
 
 toc: true
 

@@ -3,7 +3,7 @@ title: "NIO-Kqueue"
 date: 2021-07-16
 lastmod: 2021-07-16
 draft: false
-tags: ["nio", "net", "golang"]
+tags: ["nio", "net", "Go"]
 
 toc: true
 
