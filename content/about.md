@@ -9,7 +9,7 @@ weight: 50
 
 我是Chuwt，专注于后端开发和区块链开发。
 
-* Golang
+* Go
 * Python
 
 一起为开源事业做贡献 [Github](https://github.com/chuwt).
