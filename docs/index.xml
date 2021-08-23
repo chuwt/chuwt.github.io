@@ -6,7 +6,7 @@
     <description>Recent content on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Wed, 11 Aug 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 23 Aug 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://chuwt.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -27,6 +27,15 @@
       
       <guid>https://chuwt.github.io/melon/</guid>
       <description>不定时分享互联网趣事，丰富摸鱼生活 V2EX大龄程序员的归宿,是继续留在一线城市还是回到老家的小城市 V2EX上个班真累，动不动就被老员工摆一道</description>
+    </item>
+    
+    <item>
+      <title>当我持续用爱发电</title>
+      <link>https://chuwt.github.io/post/%E5%BD%93%E6%88%91%E6%8C%81%E7%BB%AD%E7%94%A8%E7%88%B1%E5%8F%91%E7%94%B5/</link>
+      <pubDate>Mon, 23 Aug 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/post/%E5%BD%93%E6%88%91%E6%8C%81%E7%BB%AD%E7%94%A8%E7%88%B1%E5%8F%91%E7%94%B5/</guid>
+      <description>前言 前段时间朋友矿池想接入Chia，然后联系我帮忙接入下Chia的挖矿（当时是SOLO模式）。 一开始也对POC一脸蒙蔽，毕竟没 怎么接触过，所</description>
     </item>
     
     <item>
