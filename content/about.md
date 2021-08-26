@@ -17,7 +17,7 @@ Now working for [Flex](https://www.flexpool.io/) (Thanks for Alex).
 
 Loving **OpenSource** and **making** **money**.
 
-Visit my [Github](https://github.com/chuwt).
+Visiting my [Github](https://github.com/chuwt).
 
-Contact me with <weitaochu@gmail.com>.
+Contacting me with <weitaochu@gmail.com>.
 
