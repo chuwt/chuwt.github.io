@@ -15,9 +15,9 @@ Contributor of [Ethereum](https://github.com/ethereum/go-ethereum), [Bee](https:
 
 Now working for [Flex](https://www.flexpool.io/) (Thanks for Alex).
 
-Love **OpenSource** and **making** **money**.
+Loving **OpenSource** and **making** **money**.
 
-Visit my [Github](https://github.com/chuwt).
+Visiting my [Github](https://github.com/chuwt).
 
-Contact me with <weitaochu@gmail.com>.
+Contacting me with <weitaochu@gmail.com>.
 
