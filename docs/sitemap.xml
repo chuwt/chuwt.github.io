@@ -10,34 +10,55 @@
   
   <url>
     <loc>https://chuwt.github.io/melon/</loc>
-    <lastmod>2021-08-02T15:55:25+08:00</lastmod>
+    <lastmod>2021-10-07T13:41:59+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
     <loc>https://chuwt.github.io/</loc>
-    <lastmod>2021-08-31T14:54:23+08:00</lastmod>
+    <lastmod>2021-10-07T13:41:59+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://chuwt.github.io/tags/github/</loc>
-    <lastmod>2021-08-23T00:00:00+00:00</lastmod>
+    <loc>https://chuwt.github.io/tags/go/</loc>
+    <lastmod>2021-10-07T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://chuwt.github.io/post/go%E5%9F%BA%E4%BA%8E%E6%A0%88%E5%92%8C%E5%9F%BA%E4%BA%8E%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E7%BA%A6%E5%AE%9A%E6%AF%94%E8%BE%83/</loc>
+    <lastmod>2021-10-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
     <loc>https://chuwt.github.io/post/</loc>
-    <lastmod>2021-08-23T00:00:00+00:00</lastmod>
+    <lastmod>2021-10-07T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://chuwt.github.io/tags/source-code/</loc>
+    <lastmod>2021-10-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
     <loc>https://chuwt.github.io/tags/</loc>
+    <lastmod>2021-10-07T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://chuwt.github.io/tags/github/</loc>
     <lastmod>2021-08-23T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -81,13 +102,6 @@
   <url>
     <loc>https://chuwt.github.io/post/eth%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%9B%BE/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  
-  <url>
-    <loc>https://chuwt.github.io/tags/go/</loc>
-    <lastmod>2021-08-11T17:43:55+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>

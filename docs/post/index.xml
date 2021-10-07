@@ -6,10 +6,19 @@
     <description>Recent content in Posts on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 23 Aug 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 07 Oct 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://chuwt.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Go基于栈和基于寄存器的函数调用栈比较</title>
+      <link>https://chuwt.github.io/post/go%E5%9F%BA%E4%BA%8E%E6%A0%88%E5%92%8C%E5%9F%BA%E4%BA%8E%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E7%BA%A6%E5%AE%9A%E6%AF%94%E8%BE%83/</link>
+      <pubDate>Thu, 07 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/post/go%E5%9F%BA%E4%BA%8E%E6%A0%88%E5%92%8C%E5%9F%BA%E4%BA%8E%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E7%BA%A6%E5%AE%9A%E6%AF%94%E8%BE%83/</guid>
+      <description>开始之前 随着go1.17的发布，go的函数调用约定从之前的基于栈的形式改为了基于寄存器的形式:查看更新日志 所以来对比一下1.16和1.17中</description>
+    </item>
     
     <item>
       <title>用爱发电</title>
