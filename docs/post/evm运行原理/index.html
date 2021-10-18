@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>EVM运行原理 - chuwt&#39;s blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="chuwt" /><meta name="description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何" /><meta name="keywords" content="chuwt, go, golang, blog" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.61.0 with theme even" />
+
+
+<link rel="canonical" href="https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.5b4f2756c989c0ef73c0bbe0eae673ad76e0475b18a0c88d4bca3d9718f3f25f.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="EVM运行原理" />
+<meta property="og:description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/" />
+<meta property="article:published_time" content="2021-10-18T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-10-18T00:00:00+00:00" />
+<meta itemprop="name" content="EVM运行原理">
+<meta itemprop="description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何">
+<meta itemprop="datePublished" content="2021-10-18T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2021-10-18T00:00:00&#43;00:00" />
+<meta itemprop="wordCount" content="2571">
+
+
+
+<meta itemprop="keywords" content="Go,ETH,Blockchain," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="EVM运行原理"/>
+<meta name="twitter:description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Chuwt&#39;s Blog</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">首页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于我</li>
+      </a><a href="/melon/">
+        <li class="mobile-menu-item">圈子</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Chuwt&#39;s Blog</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">首页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于我</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/melon/">圈子</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">EVM运行原理</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2021-10-18 </span>
+        
+          <span class="more-meta"> 约 2571 字 </span>
+          <span class="more-meta"> 预计阅读 6 分钟 </span>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">文章目录</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#eth-evm">ETH-EVM理解</a>
+      <ul>
+        <li><a href="#heading">前言</a></li>
+        <li><a href="#heading-1">测试合约</a></li>
+        <li><a href="#heading-2">部署到测试链</a>
+          <ul>
+            <li><a href="#heading-3">部署的运行逻辑</a></li>
+            <li><a href="#heading-7">调用的运行逻辑</a></li>
+          </ul>
+        </li>
+        <li><a href="#heading-10">关于内部转账</a></li>
+        <li><a href="#heading-11">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="eth-evm">ETH-EVM理解</h1>
+<h2 id="heading">前言</h2>
+<p>EVM是以太坊虚拟机，其中<code>EVMIterpreter</code>是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何在以太坊工作的</p>
+<h2 id="heading-1">测试合约</h2>
+<ul>
+<li>以太坊合约是通过<code>solidity</code>语言编写的，经过<code>solidity</code>的编译器编译成字节码，<a href="https://github.com/ethereum/solidity">编译器源码</a></li>
+<li>可以通过<a href="https://github.com/ethereum/remix-project">Remix</a>进行合约代码的编写和部署，<code>remix</code>相当于一个<code>IDE</code>，可以本地部署(推荐)，或者使用<a href="https://remix.ethereum.org/">在线编辑</a></li>
+</ul>
+<ol>
+<li>
+<p>合约代码</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// SPDX-License-Identifier: GPL-3.0
+pragma solidity &gt;=0.7.0 &lt;0.9.0;
+   
+contract TestContract {
+    // 用来测试erc20 token
+    mapping(address =&gt; uint256) private _balances;
+   
+    function addBalance(address payable sender) public {
+        // 用来测试erc20 token
+        _balances[sender] += 100000000000000000;
+    }
+       
+    function transfer(address payable sender) public {
+        // 用来测试 internal tx
+        sender.transfer(10);
+    }
+           
+    function balanceOf(address account) public view returns (uint256) {
+        return _balances[account];
+    }
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>编译出来的字节码 bytecode</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">608060405234801561001057600080fd5b5061038b806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80631a6952301461004657806370a0823114610062578063b5cef24a14610092575b600080fd5b610060600480360381019061005b91906101f8565b6100ae565b005b61007c600480360381019061007791906101cb565b6100f9565b6040516100899190610234565b60405180910390f35b6100ac60048036038101906100a791906101f8565b610141565b005b8073ffffffffffffffffffffffffffffffffffffffff166108fc600a9081150290604051600060405180830381858888f193505050501580156100f5573d6000803e3d6000fd5b5050565b60008060008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020549050919050565b67016345785d8a00006000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254610197919061024f565b9250508190555050565b6000813590506101b081610327565b92915050565b6000813590506101c58161033e565b92915050565b6000602082840312156101e1576101e0610322565b5b60006101ef848285016101a1565b91505092915050565b60006020828403121561020e5761020d610322565b5b600061021c848285016101b6565b91505092915050565b61022e816102e9565b82525050565b60006020820190506102496000830184610225565b92915050565b600061025a826102e9565b9150610265836102e9565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561029a576102996102f3565b5b828201905092915050565b60006102b0826102c9565b9050919050565b60006102c2826102c9565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600080fd5b610330816102a5565b811461033b57600080fd5b50565b610347816102b7565b811461035257600080fd5b5056fea2646970667358221220560a7db3964c18024094ece0c5379f001e8716caeb3ab0613b67cd05f5a600f964736f6c63430008070033
+</code></pre></td></tr></table>
+</div>
+</div><p>字节码可以根据<code>jumpTable</code>翻译成特定的操作（op），是由1个字节组成（有些是参数，不一定是1个字节），上面的字节码可以翻译成如下的操作码</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH2 0x38B DUP1 PUSH2 0x20 PUSH1 0x0 CODECOPY PUSH1 0x0 RETURN INVALID PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH1 0x4 CALLDATASIZE LT PUSH2 0x41 JUMPI PUSH1 0x0 CALLDATALOAD PUSH1 0xE0 SHR DUP1 PUSH4 0x1A695230 EQ PUSH2 0x46 JUMPI DUP1 PUSH4 0x70A08231 EQ PUSH2 0x62 JUMPI DUP1 PUSH4 0xB5CEF24A EQ PUSH2 0x92 JUMPI JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x60 PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x5B SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0xAE JUMP JUMPDEST STOP JUMPDEST PUSH2 0x7C PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x77 SWAP2 SWAP1 PUSH2 0x1CB JUMP JUMPDEST PUSH2 0xF9 JUMP JUMPDEST PUSH1 0x40 MLOAD PUSH2 0x89 SWAP2 SWAP1 PUSH2 0x234 JUMP JUMPDEST PUSH1 0x40 MLOAD DUP1 SWAP2 SUB SWAP1 RETURN JUMPDEST PUSH2 0xAC PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0xA7 SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0x141 JUMP JUMPDEST STOP JUMPDEST DUP1 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH2 0x8FC PUSH1 0xA SWAP1 DUP2 ISZERO MUL SWAP1 PUSH1 0x40 MLOAD PUSH1 0x0 PUSH1 0x40 MLOAD DUP1 DUP4 SUB DUP2 DUP6 DUP9 DUP9 CALL SWAP4 POP POP POP POP ISZERO DUP1 ISZERO PUSH2 0xF5 JUMPI RETURNDATASIZE PUSH1 0x0 DUP1 RETURNDATACOPY RETURNDATASIZE PUSH1 0x0 REVERT JUMPDEST POP POP JUMP JUMPDEST PUSH1 0x0 DUP1 PUSH1 0x0 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 SLOAD SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH8 0x16345785D8A0000 PUSH1 0x0 DUP1 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 PUSH1 0x0 DUP3 DUP3 SLOAD PUSH2 0x197 SWAP2 SWAP1 PUSH2 0x24F JUMP JUMPDEST SWAP3 POP POP DUP2 SWAP1 SSTORE POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1B0 DUP2 PUSH2 0x327 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1C5 DUP2 PUSH2 0x33E JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x1E1 JUMPI PUSH2 0x1E0 PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x1EF DUP5 DUP3 DUP6 ADD PUSH2 0x1A1 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x20E JUMPI PUSH2 0x20D PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x21C DUP5 DUP3 DUP6 ADD PUSH2 0x1B6 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH2 0x22E DUP2 PUSH2 0x2E9 JUMP JUMPDEST DUP3 MSTORE POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 ADD SWAP1 POP PUSH2 0x249 PUSH1 0x0 DUP4 ADD DUP5 PUSH2 0x225 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x25A DUP3 PUSH2 0x2E9 JUMP JUMPDEST SWAP2 POP PUSH2 0x265 DUP4 PUSH2 0x2E9 JUMP JUMPDEST SWAP3 POP DUP3 PUSH32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF SUB DUP3 GT ISZERO PUSH2 0x29A JUMPI PUSH2 0x299 PUSH2 0x2F3 JUMP JUMPDEST JUMPDEST DUP3 DUP3 ADD SWAP1 POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2B0 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2C2 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF DUP3 AND SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 DUP2 SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH32 0x4E487B7100000000000000000000000000000000000000000000000000000000 PUSH1 0x0 MSTORE PUSH1 0x11 PUSH1 0x4 MSTORE PUSH1 0x24 PUSH1 0x0 REVERT JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x330 DUP2 PUSH2 0x2A5 JUMP JUMPDEST DUP2 EQ PUSH2 0x33B JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP JUMPDEST PUSH2 0x347 DUP2 PUSH2 0x2B7 JUMP JUMPDEST DUP2 EQ PUSH2 0x352 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 JUMP EXP PUSH30 0xB3964C18024094ECE0C5379F001E8716CAEB3AB0613B67CD05F5A600F964 PUSH20 0x6F6C634300080700330000000000000000000000
+</code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h2 id="heading-2">部署到测试链</h2>
+<ol>
+<li>这里可以通过<code>Remix</code>进行部署，其中有3种方式
+<ol>
+<li>JavaScript VM：js实现的EVM</li>
+<li>Injected Web3：浏览器的钱包插件</li>
+<li>Web3 Provider：直接通过web3建立连接，注意需要在启动时添加http和跨域参数<code>--http --http.corsdomain https://remix.ethereum.org</code></li>
+</ol>
+</li>
+<li>这里我DEBUG了一个ETH测试链，然后本地跑起来，再通过<code>Web3 Provider</code>的形式直连，这样就可以很方便的进行DEBUG了，具体流程可以谷歌</li>
+</ol>
+<h3 id="heading-3">部署的运行逻辑</h3>
+<h4 id="heading-4">首先看部署合约产生的交易</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">{
+    &#34;type&#34;:&#34;0x2&#34;, // 这里的交易类型是DynamicFeeTxType，是EIP-1559的新协议使用的交易
+    &#34;nonce&#34;:&#34;0x1&#34;,
+    &#34;gasPrice&#34;:null,
+    &#34;maxPriorityFeePerGas&#34;:&#34;0x3b9aca00&#34;, // EIP-1559新增，计算手续费使用
+    &#34;maxFeePerGas&#34;:&#34;0x77359400&#34;,				 // EIP-1559新增，计算手续费使用
+    &#34;gas&#34;:&#34;0x3cb2a&#34;,
+    &#34;value&#34;:&#34;0x0&#34;,											 // value是0
+    &#34;input&#34;:&#34;0x608060405234801561001057600080fd5b5061038b806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80631a6952301461004657806370a0823114610062578063b5cef24a14610092575b600080fd5b610060600480360381019061005b91906101f8565b6100ae565b005b61007c600480360381019061007791906101cb565b6100f9565b6040516100899190610234565b60405180910390f35b6100ac60048036038101906100a791906101f8565b610141565b005b8073ffffffffffffffffffffffffffffffffffffffff166108fc600a9081150290604051600060405180830381858888f193505050501580156100f5573d6000803e3d6000fd5b5050565b60008060008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020549050919050565b67016345785d8a00006000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254610197919061024f565b9250508190555050565b6000813590506101b081610327565b92915050565b6000813590506101c58161033e565b92915050565b6000602082840312156101e1576101e0610322565b5b60006101ef848285016101a1565b91505092915050565b60006020828403121561020e5761020d610322565b5b600061021c848285016101b6565b91505092915050565b61022e816102e9565b82525050565b60006020820190506102496000830184610225565b92915050565b600061025a826102e9565b9150610265836102e9565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561029a576102996102f3565b5b828201905092915050565b60006102b0826102c9565b9050919050565b60006102c2826102c9565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600080fd5b610330816102a5565b811461033b57600080fd5b50565b610347816102b7565b811461035257600080fd5b5056fea2646970667358221220560a7db3964c18024094ece0c5379f001e8716caeb3ab0613b67cd05f5a600f964736f6c63430008070033&#34;, // input是合约的字节码
+    &#34;to&#34;:null, // to是nil
+    &#34;chainId&#34;:&#34;0x7c8&#34;,
+    &#34;hash&#34;:&#34;0xa3980499a36b7c0d16fc565a473179c7a48131aea586e67da24a67b4272e1330&#34;
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>所以当to是nil时，是一个创建合约的交易</p>
+<h4 id="heading-5">代码运行</h4>
+<p>省略交易传递的种种，我们直接到交易运行处</p>
+<ol>
+<li>
+<p>ApplyMessage入口</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// core/state_transition.go
+// 接受交易运行的入口
+func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) (*ExecutionResult, error) {
+  return NewStateTransition(evm, msg, gp).TransitionDb()
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>TransitionDb判断交易</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// core/state_transition.go
+func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
+  // ...忽略其他代码
+  contractCreation := msg.To() == nil
+  // 可以看到，代码代码中也是通过判断To是否是空来运行不同逻辑的
+  // 当To是nil时，运行Create方法
+  if contractCreation {
+    ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value)
+  } else {
+    st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+    ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
+  }
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>evm.Create创建合约</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// core/vm/evm.go
+func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+  // 首先计算合约地址
+  contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()))
+  // 调用内部创建方法
+  return evm.create(caller, &amp;codeAndHash{code: code}, gas, value, contractAddr)
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>crypto.CreateAddress计算合约地址</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// crypto/crypto.go
+func CreateAddress(b common.Address, nonce uint64) common.Address {
+  // 可以看到合约地址是 调用者的地址+交易的nonce进行rlp编码后，再通过Keccake256计算取前12位
+  // 得到的，所以完全可以根据一笔交易计算次合约地址
+  data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
+  return common.BytesToAddress(Keccak256(data)[12:])
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>
+<p>evm.create内部创建</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address) ([]byte, common.Address, uint64, error) {
+  // ...忽略其他代码
+  // 数据库创建合约
+  evm.StateDB.CreateAccount(address)
+  // 调用transfer代码，此时会从调用者的余额转装到合约地址
+  evm.Context.Transfer(evm.StateDB, caller.Address(), address, value)
+  // 实例化一个合约对象
+  contract := NewContract(caller, AccountRef(address), value, gas)
+  // 将字节码写入contract
+  contract.SetCodeOptionalHash(&amp;address, codeAndHash)
+  // 运行解释器，运行字节码（重要，后面深入展开）
+  ret, err := evm.interpreter.Run(contract, nil, false)
+  // 返回运行结果
+  return ret, address, contract.Gas, err
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h4 id="heading-6">总结</h4>
+<ol>
+<li>可以看到创建合约的交易是通过<code>to=nil</code>来标记的</li>
+<li>可以通过发送者的<code>address+nonce</code>计算合约地址</li>
+<li>合约最终会通过解释器运行</li>
+</ol>
+<h3 id="heading-7">调用的运行逻辑</h3>
+<p>首先我们通过调用<code>balanceOf()</code>这个方法看一下合约调用逻辑</p>
+<h4 id="-">调用合约的方法-不上链</h4>
+<p>在调用balanceOf之后，我们发现并没有在<code>EthAPIBackend.SendTx</code>处捕获到断点，查看<code>remix</code>状态，发现
+调用的是eth_call这个api，通过检查注册的API，最终在<code>PublicBlockChainAPI.Call</code>找到了方法</p>
+<h5 id="publicblockchainapicall">PublicBlockChainAPI.Call</h5>
+<p>简而言之，Call方法主要是进行不上链的操作调用，直接从数据库获取状态，首先看一下传入的参数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">{
+    &#34;from&#34;:&#34;0x8d07a5ba716a12a435ec31303049ebf81ca08cc6&#34;,
+    &#34;to&#34;:&#34;0x941b77f8e5248930e5e52029c830994d876eb3a2&#34;, // 合约地址
+    &#34;gas&#34;:&#34;0x2dc6c0&#34;,                                    
+    &#34;gasPrice&#34;:null,
+    &#34;maxFeePerGas&#34;:null,
+    &#34;maxPriorityFeePerGas&#34;:null,
+    &#34;value&#34;:&#34;0x0&#34;,
+    &#34;nonce&#34;:null,
+    &#34;data&#34;:&#34;0x70a082310000000000000000000000008d07a5ba716a12a435ec31303049ebf81ca08cc6&#34;, // 调用的数据
+    &#34;input&#34;:null
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>其中data字段包含了调用的合约方法和参数</p>
+<h5 id="heading-8">方法和参数生成</h5>
+<p>data字段的值是由方法和参数组成的，其中方法名为</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">crypto.Keccak256Hash([]byte(&#34;balanceOf(address)&#34;))
+// 0x70a08231b98ef4ca268c9cc3f6b4590e4bfec28280db06bb5d45e689f2a360be
+</code></pre></td></tr></table>
+</div>
+</div><p>其中参数是参数类型，然后取前4个字节作为方法名称，最后生成为<code>0x70a08231</code><br/>
+然后参数为hexString编码，如果string长度不够64，则往前补齐0，最后将方法名和参数拼接在一起：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">0x70a08231
+  0000000000000000000000008d07a5ba716a12a435ec31303049ebf81ca08cc6 // len = 64
+</code></pre></td></tr></table>
+</div>
+</div><p>跟复杂的拼接逻辑说明请看<a href="https://solidity-cn.readthedocs.io/zh/develop/abi-spec.html">官方文档</a></p>
+<h4 id="--1">调用合约的方法-上链</h4>
+<p>接下来我们调用<code>addBalance()</code>这个方法来进行上链数据的调用，看一下代码运行。</p>
+<h5 id="heading-9">交易结构</h5>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="heading-10">关于内部转账</h2>
+<p>内部转账的实现可以通过以下三种方式</p>
+<ol>
+<li>transfer (2300 gas, throws error)</li>
+<li>send (2300 gas, returns bool)</li>
+<li>call (forward all gas or set gas, returns bool)</li>
+</ol>
+<p>本质上<code>transfer</code>和<code>send</code>会被编译器编译成<code>call</code></p>
+<h2 id="heading-11">参考</h2>
+<ul>
+<li><a href="https://www.jianshu.com/p/230c6d805560">https://www.jianshu.com/p/230c6d805560</a></li>
+<li><a href="https://solidity-by-example.org/sending-ether/">https://solidity-by-example.org/sending-ether/</a></li>
+</ul>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">文章作者</span>
+    <span class="item-content">chuwt</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">上次更新</span>
+    <span class="item-content">
+        2021-10-18
+        
+    </span>
+  </p>
+  
+  
+</div>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/go/">Go</a>
+          <a href="/tags/eth/">ETH</a>
+          <a href="/tags/blockchain/">Blockchain</a>
+          </div>
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/go%E5%9F%BA%E4%BA%8E%E6%A0%88%E5%92%8C%E5%9F%BA%E4%BA%8E%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E7%BA%A6%E5%AE%9A%E6%AF%94%E8%BE%83/">
+            <span class="next-text nav-default">Go基于栈和基于寄存器的函数调用栈比较</span>
+            <span class="next-text nav-mobile">下一篇</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:weitaochu@gmail.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/chuwt" class="iconfont icon-github" title="github"></a>
+  <a href="https://chuwt.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    由 <a class="hexo-link" href="https://gohugo.io">Hugo</a> 强力驱动
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    主题 - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>chuwt</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

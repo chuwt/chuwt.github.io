@@ -6,10 +6,19 @@
     <description>Recent content in blockchain on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Wed, 11 Aug 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 18 Oct 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://chuwt.github.io/tags/blockchain/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>EVM运行原理</title>
+      <link>https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/</link>
+      <pubDate>Mon, 18 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/</guid>
+      <description>ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何</description>
+    </item>
     
     <item>
       <title>ETH函数调用图</title>
