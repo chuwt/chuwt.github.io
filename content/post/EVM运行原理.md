@@ -66,9 +66,9 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
     3. Web3 Provider：直接通过web3建立连接，注意需要在启动时添加http和跨域参数`--http --http.corsdomain https://remix.ethereum.org`
 2. 这里我DEBUG了一个ETH测试链，然后本地跑起来，再通过`Web3 Provider`的形式直连，这样就可以很方便的进行DEBUG了，具体流程可以谷歌
 
-### 部署的运行逻辑
+## 部署的运行逻辑
 
-#### 首先看部署合约产生的交易
+### 首先看部署合约产生的交易
 
 ```
 {
@@ -88,7 +88,7 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
 
 所以当to是nil时，是一个创建合约的交易
 
-#### 代码运行
+### 代码运行
 
 省略交易传递的种种，我们直接到交易运行处
 
@@ -163,17 +163,17 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
      return ret, address, contract.Gas, err
    }
    ```
-#### 总结
+### 总结
 1. 可以看到创建合约的交易是通过`to=nil`来标记的
 2. 可以通过发送者的`address+nonce`计算合约地址
 3. 合约最终会通过解释器运行
 
-### 调用的运行逻辑
+## 调用的运行逻辑
 首先我们通过调用`balanceOf()`这个方法看一下合约调用逻辑
-#### 调用合约的方法-不上链
+### 调用合约的方法-不上链
 在调用balanceOf之后，我们发现并没有在`EthAPIBackend.SendTx`处捕获到断点，查看`remix`状态，发现
 调用的是eth_call这个api，通过检查注册的API，最终在`PublicBlockChainAPI.Call`找到了方法
-##### PublicBlockChainAPI.Call
+### PublicBlockChainAPI.Call
 简而言之，Call方法主要是进行不上链的操作调用，直接从数据库获取状态，首先看一下传入的参数
 ```
 {
@@ -190,7 +190,7 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
 }
 ```
 其中data字段包含了调用的合约方法和参数
-##### 方法和参数生成
+#### 方法和参数生成
 data字段的值是由方法和参数组成的，其中方法名为
 ```
 crypto.Keccak256Hash([]byte("balanceOf(address)"))
@@ -204,13 +204,43 @@ crypto.Keccak256Hash([]byte("balanceOf(address)"))
 ```
 更复杂的拼接逻辑说明请看[官方文档](https://solidity-cn.readthedocs.io/zh/develop/abi-spec.html)
 
-#### 调用合约的方法-上链
+### 调用合约的方法-上链
 接下来我们调用`addBalance()`这个方法来进行上链数据的调用，看一下代码运行。
-##### 交易结构
+#### TODO 交易结构
 ```
 
 ```
-   
+
+## EVM解释器运行逻辑
+解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程
+### 创建合约的解释过程
+index表示字节码下表，ops表示字节翻译成的操作码（具体可以看jumpTable)
+```
+:index	    :ops			:comment
+0-1			PUSH1 0x80     // 将 0x80 压入stack
+2-3			PUSH1 0x40     // 将 0x40 压入stack
+4			MSTORE		   // 将 0x40 和 0x80 pop出来，memory中生成 32 字节的空间，同时将 0x80 写入创建的bytes中
+5		 	CALLVALUE      // 将调用合约时传入的value压入stack
+6		 	DUP1           // 将stack[len-1]的元素压入stack里（stack实际上是一个slice）,此时是将value值再次压入stack中
+7		 	ISZERO		   // 获取stack最顶的元素，判断是否为0，如果为0，则设置为1
+8-10 		PUSH2 0x10     // push2将后面两个byte（0x00和0x10）转为int，然后压入stack，这里没有0x00是因为被省略了，具体可以看debug时的Code，在index=9存在一个0字节
+11			JUMPI	       // 将上面的 pos=0x0010 和 cond=0x01 pop出来，然后跳转到0x0010（16）处，即下面的JUMPDEST处
+16			JUMPDEST	   // 返回空
+17			POP			   // stack pop
+18-20		PUSH2 0x44A	   // 同上面的PUSH2，将 0x00和0x44A 转为int后压入stack
+21			DUP1		   // 将上面的值再次压入stack
+22-24		PUSH2 0x20	   // 将 0x00和0x20 转为int后压入stack
+25-26		PUSH1 0x0	   // 将 0x0 压入stack
+27			CODECOPY	   // pop 3个值，分别对应memOffset，codeOffet字节码中的下标，length字节长度，所以是获取CODE[32:1130]（CODE总长就是1130，所以相当于到末尾）的字节，然后复制到memory的memOffset开始的地方
+28			PUSH1 0x0	   // 0x0 压入stack
+29			RETURN		   // offset=0x0, size=0x44a，pop两个值，然后返回memory指向的bytes
+```
+到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中
+
+### 执行合约方法的解释过程
+
+
+### 合约嵌套
 
 ## 关于内部转账
 
