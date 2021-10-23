@@ -202,7 +202,7 @@ crypto.Keccak256Hash([]byte("balanceOf(address)"))
 0x70a08231
   0000000000000000000000008d07a5ba716a12a435ec31303049ebf81ca08cc6 // len = 64
 ```
-跟复杂的拼接逻辑说明请看[官方文档](https://solidity-cn.readthedocs.io/zh/develop/abi-spec.html)
+更复杂的拼接逻辑说明请看[官方文档](https://solidity-cn.readthedocs.io/zh/develop/abi-spec.html)
 
 #### 调用合约的方法-上链
 接下来我们调用`addBalance()`这个方法来进行上链数据的调用，看一下代码运行。

@@ -13,11 +13,11 @@ Good at `Go` and `Python`.
 
 Contributor of [Ethereum](https://github.com/ethereum/go-ethereum), [Bee](https://github.com/ethersphere/bee) and [Chia](https://github.com/Chia-Network/chia-blockchain).
 
-Now working for [Flex](https://www.flexpool.io/) (Thanks for Alex).
+Now working for [Flexpool](https://www.flexpool.io/) (Thanks for Alex).
 
-Loving **OpenSource** and **making** **money**.
+Loving **OpenSource** and **life**.
 
 Visiting my [Github](https://github.com/chuwt).
 
-Contacting me with <weitaochu@gmail.com>.
+Contacting me by <weitaochu@gmail.com>.
 
