@@ -9,6 +9,7 @@ weight: 50
 
 不定时分享互联网趣事，丰富摸鱼生活
 
+- <font size=2>`V2EX`</font>[[开撕] 现在在 github 开源项目上不回答别人的问题，都是错了么？并且还是错的很严重的那种么？](https://www.v2ex.com/t/809868)
 - <font size=2>`V2EX`</font>[关于青岛前几天我个人信息被青岛某公司曝光并恶意中伤的一些声明](https://www.v2ex.com/t/806072)
 - <font size=2>`V2EX`</font>[大龄程序员的归宿,是继续留在一线城市还是回到老家的小城市](https://www.v2ex.com/t/793034?p=1)
 - <font size=2>`V2EX`</font>[上个班真累，动不动就被老员工摆一道](https://www.v2ex.com/t/790098?p=1)
