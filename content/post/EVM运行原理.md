@@ -159,6 +159,8 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
      contract.SetCodeOptionalHash(&address, codeAndHash)
      // 运行解释器，运行字节码（重要，后面深入展开）
      ret, err := evm.interpreter.Run(contract, nil, false)
+     // 存储合约
+     evm.StateDB.SetCode(address, ret)
      // 返回运行结果
      return ret, address, contract.Gas, err
    }
@@ -231,11 +233,11 @@ index表示字节码下表，ops表示字节翻译成的操作码（具体可以
 21          DUP1          // 将上面的值再次压入stack
 22-24       PUSH2 0x20    // 将 0x00和0x20 转为int后压入stack
 25-26       PUSH1 0x0     // 将 0x0 压入stack
-27          CODECOPY      // pop 3个值，分别对应memOffset，codeOffet字节码中的下标，length字节长度，所以是获取CODE[32:1130]（CODE总长就是1130，所以相当于到末尾）的字节，然后复制到memory的memOffset开始的地方
-28          PUSH1 0x0     // 0x0 压入stack
-29          RETURN        // offset=0x0, size=0x38B，pop两个值，然后返回memory指向的bytes
+27          CODECOPY      // pop 3个值，分别对应memOffset，codeOffet字节码中的下标，length字节长度，所以是获取CODE[32:939]（CODE总长就是939，所以相当于到末尾）的字节，然后复制到memory的memOffset开始的地方
+28-29       PUSH1 0x0     // 0x0 压入stack
+30          RETURN        // offset=0x0, size=0x38B，pop两个值，然后返回memory指向的bytes
 ```
-到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中，所以这里的前29个
+到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中。所以调用时执行合约的代码是在return之后的字节码，创建只是初始化一些全局变量等。
 
 ### 执行合约方法的解释过程
 

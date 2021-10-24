@@ -49,7 +49,7 @@
 <meta itemprop="description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何">
 <meta itemprop="datePublished" content="2021-10-18T00:00:00+00:00" />
 <meta itemprop="dateModified" content="2021-10-18T00:00:00+00:00" />
-<meta itemprop="wordCount" content="3374">
+<meta itemprop="wordCount" content="3414">
 
 
 
@@ -138,7 +138,7 @@
       <div class="post-meta">
         <span class="post-time"> 2021-10-18 </span>
         
-          <span class="more-meta"> 约 3374 字 </span>
+          <span class="more-meta"> 约 3414 字 </span>
           <span class="more-meta"> 预计阅读 7 分钟 </span>
         
       </div>
@@ -433,6 +433,8 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 </span><span class="lnt">13
 </span><span class="lnt">14
 </span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-fallback" data-lang="fallback">func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address) ([]byte, common.Address, uint64, error) {
@@ -447,6 +449,8 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
   contract.SetCodeOptionalHash(&amp;address, codeAndHash)
   // 运行解释器，运行字节码（重要，后面深入展开）
   ret, err := evm.interpreter.Run(contract, nil, false)
+  // 存储合约
+  evm.StateDB.SetCode(address, ret)
   // 返回运行结果
   return ret, address, contract.Gas, err
 }
@@ -575,12 +579,12 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 21          DUP1          // 将上面的值再次压入stack
 22-24       PUSH2 0x20    // 将 0x00和0x20 转为int后压入stack
 25-26       PUSH1 0x0     // 将 0x0 压入stack
-27          CODECOPY      // pop 3个值，分别对应memOffset，codeOffet字节码中的下标，length字节长度，所以是获取CODE[32:1130]（CODE总长就是1130，所以相当于到末尾）的字节，然后复制到memory的memOffset开始的地方
-28          PUSH1 0x0     // 0x0 压入stack
-29          RETURN        // offset=0x0, size=0x38B，pop两个值，然后返回memory指向的bytes
+27          CODECOPY      // pop 3个值，分别对应memOffset，codeOffet字节码中的下标，length字节长度，所以是获取CODE[32:939]（CODE总长就是939，所以相当于到末尾）的字节，然后复制到memory的memOffset开始的地方
+28-29       PUSH1 0x0     // 0x0 压入stack
+30          RETURN        // offset=0x0, size=0x38B，pop两个值，然后返回memory指向的bytes
 </code></pre></td></tr></table>
 </div>
-</div><p>到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中，所以这里的前29个</p>
+</div><p>到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中。所以调用时执行合约的代码是在return之后的字节码，创建只是初始化一些全局变量等。</p>
 <h3 id="执行合约方法的解释过程">执行合约方法的解释过程</h3>
 <h3 id="合约嵌套">合约嵌套</h3>
 <h2 id="关于内部转账">关于内部转账</h2>
