@@ -49,7 +49,7 @@
 <meta itemprop="description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何">
 <meta itemprop="datePublished" content="2021-10-18T00:00:00&#43;00:00" />
 <meta itemprop="dateModified" content="2021-10-18T00:00:00&#43;00:00" />
-<meta itemprop="wordCount" content="5345">
+<meta itemprop="wordCount" content="5854">
 
 
 
@@ -137,8 +137,8 @@
       <div class="post-meta">
         <span class="post-time"> 2021-10-18 </span>
         
-          <span class="more-meta"> 约 5345 字 </span>
-          <span class="more-meta"> 预计阅读 11 分钟 </span>
+          <span class="more-meta"> 约 5854 字 </span>
+          <span class="more-meta"> 预计阅读 12 分钟 </span>
         
       </div>
     </header>
@@ -171,14 +171,15 @@
         </li>
         <li><a href="#evm">EVM解释器运行逻辑</a>
           <ul>
-            <li><a href="#heading-12">创建合约的解释过程</a></li>
-            <li><a href="#balanceof-">balanceOf 执行合约方法的解释过程</a></li>
-            <li><a href="#addbalance-">addBalance 执行合约方法的解释过程</a></li>
-            <li><a href="#heading-14">合约嵌套</a></li>
+            <li><a href="#heading-12">创建合约的执行过程</a></li>
+            <li><a href="#balanceof-">balanceOf 合约方法的执行过程</a></li>
+            <li><a href="#addbalance-">addBalance 合约方法的执行过程</a></li>
+            <li><a href="#transfer-">transfer 合约方法的执行过程</a></li>
+            <li><a href="#heading-16">合约嵌套</a></li>
           </ul>
         </li>
-        <li><a href="#heading-15">关于内部转账</a></li>
-        <li><a href="#heading-16">参考</a></li>
+        <li><a href="#heading-19">关于内部转账</a></li>
+        <li><a href="#heading-20">参考</a></li>
       </ul>
     </li>
   </ul>
@@ -220,12 +221,42 @@
 </span><span class="lnt">19
 </span><span class="lnt">20
 </span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
 </span></code></pre></td>
 <td class="lntd">
 <pre class="chroma"><code class="language-fallback" data-lang="fallback">// SPDX-License-Identifier: GPL-3.0
 pragma solidity &gt;=0.7.0 &lt;0.9.0;
    
+// 嵌套合约
+//contract TestContractInner {
+//    TestContract con;
+//    constructor(address addr) payable {
+//        con = TestContract(addr);
+//    }
+//    
+//    function balanceOf(address account) public view returns (uint256) {
+//        return con.balanceOf(account);
+//    }
+//}
+   
 contract TestContract {
+    // 用来创建合约时的初始化   
+    // constructor() payable {}
+
     // 用来测试erc20 token
     mapping(address =&gt; uint256) private _balances;
    
@@ -666,8 +697,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 <li>最终是根据操作码的execute方法一步一步的执行</li>
 </ol>
 <h2 id="evm">EVM解释器运行逻辑</h2>
-<p>解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程</p>
-<h3 id="heading-12">创建合约的解释过程</h3>
+<p>解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程，建议结合<code>REMIX</code>的DEBUG模式一起使用</p>
+<h3 id="heading-12">创建合约的执行过程</h3>
 <p>index表示字节码下表，ops表示字节翻译成的操作码（具体可以看jumpTable)</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -712,7 +743,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 </code></pre></td></tr></table>
 </div>
 </div><p>到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中。所以调用时执行合约的代码是在return之后的字节码，创建只是初始化一些全局变量等。</p>
-<h3 id="balanceof-">balanceOf 执行合约方法的解释过程</h3>
+<h3 id="balanceof-">balanceOf 合约方法的执行过程</h3>
 <p>我们首先通过上面的<code>balanceOf</code>来看一下合约调用时的解释过程</p>
 <h4 id="input">input</h4>
 <div class="highlight"><div class="chroma">
@@ -877,7 +908,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 </div>
 </div><p>调用一次查询余额的操作其实还蛮复杂的，会各种跳转，但关键操作是<code>SHA3</code>和<code>SLOAD</code>，首先是数据库中存储用户数据的key是如何来的。通过查看SHA3的方法，
 可以看到Key是由用户address+变量下标得来的。所以当前的是key=hash(address+0)，所以从数据库（这个合约的）中搜索key对应的value值返回</p>
-<h3 id="addbalance-">addBalance 执行合约方法的解释过程</h3>
+<h3 id="addbalance-">addBalance 合约方法的执行过程</h3>
 <p>现在看一下存在对合约操作的解释过程，这次我们只看重点</p>
 <h4 id="input-1">input</h4>
 <div class="highlight"><div class="chroma">
@@ -888,17 +919,74 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 <pre class="chroma"><code class="language-fallback" data-lang="fallback">0xb5cef24a000000000000000000000000d80e810da222e282112f601f35040a24da7f770e
 </code></pre></td></tr></table>
 </div>
-</div><h4 id="todo-">TODO 执行过程</h4>
+</div><h4 id="heading-14">执行过程</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+。。。 省略其他操作
+392         SHA3             // 生成查询的地址的key
+397         SLOAD            // 根据key获取当前的值
+669         ADD              // 将上面获取的值与设置的值相加
+413         SSTORE           // 将相加的值写入数据库
+173         STOP             // 停止返回
+</code></pre></td></tr></table>
+</div>
+</div><p>上链操作就会涉及到数据库操作<code>SSTORE</code>来更新状态</p>
+<h3 id="transfer-">transfer 合约方法的执行过程</h3>
+<p>上面的合约方法是涉及到合约全局变量的修改，我们来看一下特殊的，合约内部转账</p>
+<h4 id="input-2">input</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">0x1a6952300000000000000000000000005b38da6a701c568545dcfcb03fcb875f56beddc4
 </code></pre></td></tr></table>
 </div>
-</div><h3 id="heading-14">合约嵌套</h3>
-<h2 id="heading-15">关于内部转账</h2>
+</div><h4 id="heading-15">执行过程</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+。。。 省略多余操作
+230         CALL             // 这个方法会触发调用interpreter.evm.Call，所以会触发transfer进行转账
+97          STOP
+</code></pre></td></tr></table>
+</div>
+</div><p>当使用<code>transfer</code>时，实际上会调用<code>evm.Call</code>，相当于一个递归</p>
+<h3 id="heading-16">合约嵌套</h3>
+<p>如果我们在一个合约里调用了另一个合约的方法，程序是如何执行的呢</p>
+<h4 id="heading-17">创建执行过程</h4>
+<p>会将使用的合约地址保存在数据库中</p>
+<h4 id="heading-18">调用执行过程</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+。。。 省略多余操作
+215         STATICCALL       // 此方法会调用evm.CALL，相当于新建一个contract对象，然后加载其CODE，然后运行
+</code></pre></td></tr></table>
+</div>
+</div><p>所以合约嵌套执行是通过类似CALL的操作码进行递归调用到evm.CALL的</p>
+<h2 id="heading-19">关于内部转账</h2>
 <p>内部转账的实现可以通过以下三种方式</p>
 <ol>
 <li>transfer (2300 gas, throws error)</li>
@@ -906,7 +994,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 <li>call (forward all gas or set gas, returns bool)</li>
 </ol>
 <p>本质上<code>transfer</code>和<code>send</code>会被编译器编译成<code>call</code></p>
-<h2 id="heading-16">参考</h2>
+<h2 id="heading-20">参考</h2>
 <ul>
 <li><a href="https://www.jianshu.com/p/230c6d805560">https://www.jianshu.com/p/230c6d805560</a></li>
 <li><a href="https://solidity-by-example.org/sending-ether/">https://solidity-by-example.org/sending-ether/</a></li>

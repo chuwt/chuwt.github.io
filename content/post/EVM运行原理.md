@@ -26,7 +26,22 @@ EVM是以太坊虚拟机，其中`EVMIterpreter`是运行合约代码的解释�
    // SPDX-License-Identifier: GPL-3.0
    pragma solidity >=0.7.0 <0.9.0;
    
+   // 嵌套合约
+   //contract TestContractInner {
+   //    TestContract con;
+   //    constructor(address addr) payable {
+   //        con = TestContract(addr);
+   //    }
+   //    
+   //    function balanceOf(address account) public view returns (uint256) {
+   //        return con.balanceOf(account);
+   //    }
+   //}
+   
    contract TestContract {
+       // 用来创建合约时的初始化   
+       // constructor() payable {}
+
        // 用来测试erc20 token
        mapping(address => uint256) private _balances;
    
@@ -275,8 +290,8 @@ crypto.Keccak256Hash([]byte("balanceOf(address)"))
 3. 最终是根据操作码的execute方法一步一步的执行
 
 ## EVM解释器运行逻辑
-解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程
-### 创建合约的解释过程
+解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程，建议结合`REMIX`的DEBUG模式一起使用
+### 创建合约的执行过程
 index表示字节码下表，ops表示字节翻译成的操作码（具体可以看jumpTable)
 ```
 :index      :ops          :comment
@@ -300,7 +315,7 @@ index表示字节码下表，ops表示字节翻译成的操作码（具体可以
 ```
 到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中。所以调用时执行合约的代码是在return之后的字节码，创建只是初始化一些全局变量等。
 
-### balanceOf 执行合约方法的解释过程
+### balanceOf 合约方法的执行过程
 我们首先通过上面的`balanceOf`来看一下合约调用时的解释过程
 #### input
 ```
@@ -385,23 +400,52 @@ index表示字节码下表，ops表示字节翻译成的操作码（具体可以
 调用一次查询余额的操作其实还蛮复杂的，会各种跳转，但关键操作是`SHA3`和`SLOAD`，首先是数据库中存储用户数据的key是如何来的。通过查看SHA3的方法，
 可以看到Key是由用户address+变量下标得来的。所以当前的是key=hash(address+0)，所以从数据库（这个合约的）中搜索key对应的value值返回
 
-### addBalance 执行合约方法的解释过程
+### addBalance 合约方法的执行过程
 现在看一下存在对合约操作的解释过程，这次我们只看重点
 #### input
 ```
 0xb5cef24a000000000000000000000000d80e810da222e282112f601f35040a24da7f770e
 ```
-#### TODO 执行过程
+#### 执行过程
 ```
 :index      :ops             :comment
+。。。 省略其他操作
+392         SHA3             // 生成查询的地址的key
+397         SLOAD            // 根据key获取当前的值
+669         ADD              // 将上面获取的值与设置的值相加
+413         SSTORE           // 将相加的值写入数据库
+173         STOP             // 停止返回
 ```
- 
+上链操作就会涉及到数据库操作`SSTORE`来更新状态
 
+### transfer 合约方法的执行过程
+上面的合约方法是涉及到合约全局变量的修改，我们来看一下特殊的，合约内部转账
+#### input
+```
+0x1a6952300000000000000000000000005b38da6a701c568545dcfcb03fcb875f56beddc4
+```
+#### 执行过程
+```
+:index      :ops             :comment
+。。。 省略多余操作
+230         CALL             // 这个方法会触发调用interpreter.evm.Call，所以会触发transfer进行转账
+97          STOP
+```
+当使用`transfer`时，实际上会调用`evm.Call`，相当于一个递归
 
 ### 合约嵌套
+如果我们在一个合约里调用了另一个合约的方法，程序是如何执行的呢
+#### 创建执行过程
+会将使用的合约地址保存在数据库中
+#### 调用执行过程
+```
+:index      :ops             :comment
+。。。 省略多余操作
+215         STATICCALL       // 此方法会调用evm.CALL，相当于新建一个contract对象，然后加载其CODE，然后运行
+```
+所以合约嵌套执行是通过类似CALL的操作码进行递归调用到evm.CALL的
 
 ## 关于内部转账
-
 内部转账的实现可以通过以下三种方式
 
 1. transfer (2300 gas, throws error)
