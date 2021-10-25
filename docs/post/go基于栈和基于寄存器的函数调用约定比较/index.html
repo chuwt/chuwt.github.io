@@ -23,7 +23,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.80.0 with theme even" />
+<meta name="generator" content="Hugo 0.61.0 with theme even" />
 
 
 <link rel="canonical" href="https://chuwt.github.io/post/go%E5%9F%BA%E4%BA%8E%E6%A0%88%E5%92%8C%E5%9F%BA%E4%BA%8E%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E7%BA%A6%E5%AE%9A%E6%AF%94%E8%BE%83/" />
@@ -35,7 +35,7 @@
 
 
 
-<link href="/sass/main.min.2e81bbed97b8b282c1aeb57488cc71c8d8c8ec559f3931531bd396bf31e0d4dd.css" rel="stylesheet">
+<link href="/sass/main.min.5b4f2756c989c0ef73c0bbe0eae673ad76e0475b18a0c88d4bca3d9718f3f25f.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
@@ -47,14 +47,13 @@
 <meta property="article:modified_time" content="2021-10-07T00:00:00+00:00" />
 <meta itemprop="name" content="Go基于栈和基于寄存器的函数调用栈比较">
 <meta itemprop="description" content="开始之前 随着go1.17的发布，go的函数调用约定从之前的基于栈的形式改为了基于寄存器的形式:查看更新日志 所以来对比一下1.16和1.17中">
-<meta itemprop="datePublished" content="2021-10-07T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2021-10-07T00:00:00+00:00" />
+<meta itemprop="datePublished" content="2021-10-07T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2021-10-07T00:00:00&#43;00:00" />
 <meta itemprop="wordCount" content="3512">
 
 
 
-<meta itemprop="keywords" content="Go,source code," />
-<meta name="twitter:card" content="summary"/>
+<meta itemprop="keywords" content="Go,source code," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Go基于栈和基于寄存器的函数调用栈比较"/>
 <meta name="twitter:description" content="开始之前 随着go1.17的发布，go的函数调用约定从之前的基于栈的形式改为了基于寄存器的形式:查看更新日志 所以来对比一下1.16和1.17中"/>
 
@@ -151,12 +150,12 @@
   <ul>
     <li>
       <ul>
-        <li><a href="#开始之前">开始之前</a></li>
-        <li><a href="#调用方法">调用方法</a></li>
-        <li><a href="#1168-的函数调用栈">1.16.8 的函数调用栈</a></li>
-        <li><a href="#1171-的函数调用栈">1.17.1 的函数调用栈</a></li>
-        <li><a href="#总结">总结</a></li>
-        <li><a href="#参考">参考</a></li>
+        <li><a href="#heading">开始之前</a></li>
+        <li><a href="#heading-1">调用方法</a></li>
+        <li><a href="#1168-">1.16.8 的函数调用栈</a></li>
+        <li><a href="#1171-">1.17.1 的函数调用栈</a></li>
+        <li><a href="#heading-2">总结</a></li>
+        <li><a href="#heading-3">参考</a></li>
       </ul>
     </li>
   </ul>
@@ -164,13 +163,13 @@
   </div>
 </div>
     <div class="post-content">
-      <h2 id="开始之前">开始之前</h2>
+      <h2 id="heading">开始之前</h2>
 <ul>
 <li>随着go1.17的发布，go的函数调用约定从之前的<code>基于栈</code>的形式改为了<code>基于寄存器</code>的形式:<a href="https://golang.org/doc/go1.17#compiler">查看更新日志</a></li>
 <li>所以来对比一下1.16和1.17中函数调用栈的不同</li>
 <li>对比版本为<code>1.17.1 darwin/amd64</code>vs<code>1.16.8 darwin/amd64</code></li>
 </ul>
-<h2 id="调用方法">调用方法</h2>
+<h2 id="heading-1">调用方法</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt"> 1
@@ -193,7 +192,7 @@
 <td class="lntd">
 <pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+<span class="kd">func</span> <span class="nf">main</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span>
 	<span class="kd">var</span> <span class="p">(</span>
 		<span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">,</span> <span class="nx">c</span> <span class="p">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span>
 	<span class="p">)</span>
@@ -215,7 +214,7 @@
 <li>-S	print assembly listing 列出汇编</li>
 <li>-l    disable inlining       禁止内联</li>
 </ul>
-<h2 id="1168-的函数调用栈">1.16.8 的函数调用栈</h2>
+<h2 id="1168-">1.16.8 的函数调用栈</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt">  1
@@ -445,7 +444,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><p>可以看出来<code>1.16.8</code>中，函数调用的参数传递是放在调用方(caller)这里的</p>
-<h2 id="1171-的函数调用栈">1.17.1 的函数调用栈</h2>
+<h2 id="1171-">1.17.1 的函数调用栈</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt">  1
@@ -664,7 +663,7 @@
                                         // 剩下的与1.16一致
 </code></pre></td></tr></table>
 </div>
-</div><h2 id="总结">总结</h2>
+</div><h2 id="heading-2">总结</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt">1
@@ -681,7 +680,7 @@
     1.17 寄存器-&gt;临时变量-&gt;寄存器-&gt;变量
 </code></pre></td></tr></table>
 </div>
-</div><h2 id="参考">参考</h2>
+</div><h2 id="heading-3">参考</h2>
 <ul>
 <li><a href="https://segmentfault.com/a/1190000019753885">https://segmentfault.com/a/1190000019753885</a></li>
 <li><a href="https://www.cnblogs.com/luozhiyun/p/14844710.html">https://www.cnblogs.com/luozhiyun/p/14844710.html</a></li>

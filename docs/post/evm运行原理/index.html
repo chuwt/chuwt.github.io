@@ -23,7 +23,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.80.0 with theme even" />
+<meta name="generator" content="Hugo 0.61.0 with theme even" />
 
 
 <link rel="canonical" href="https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/" />
@@ -35,7 +35,7 @@
 
 
 
-<link href="/sass/main.min.2e81bbed97b8b282c1aeb57488cc71c8d8c8ec559f3931531bd396bf31e0d4dd.css" rel="stylesheet">
+<link href="/sass/main.min.5b4f2756c989c0ef73c0bbe0eae673ad76e0475b18a0c88d4bca3d9718f3f25f.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
@@ -47,14 +47,13 @@
 <meta property="article:modified_time" content="2021-10-18T00:00:00+00:00" />
 <meta itemprop="name" content="EVM运行原理">
 <meta itemprop="description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何">
-<meta itemprop="datePublished" content="2021-10-18T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2021-10-18T00:00:00+00:00" />
-<meta itemprop="wordCount" content="3414">
+<meta itemprop="datePublished" content="2021-10-18T00:00:00&#43;00:00" />
+<meta itemprop="dateModified" content="2021-10-18T00:00:00&#43;00:00" />
+<meta itemprop="wordCount" content="5345">
 
 
 
-<meta itemprop="keywords" content="Go,ETH,Blockchain," />
-<meta name="twitter:card" content="summary"/>
+<meta itemprop="keywords" content="Go,ETH,Blockchain," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="EVM运行原理"/>
 <meta name="twitter:description" content="ETH-EVM理解 前言 EVM是以太坊虚拟机，其中EVMIterpreter是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何"/>
 
@@ -138,8 +137,8 @@
       <div class="post-meta">
         <span class="post-time"> 2021-10-18 </span>
         
-          <span class="more-meta"> 约 3414 字 </span>
-          <span class="more-meta"> 预计阅读 7 分钟 </span>
+          <span class="more-meta"> 约 5345 字 </span>
+          <span class="more-meta"> 预计阅读 11 分钟 </span>
         
       </div>
     </header>
@@ -149,34 +148,37 @@
   <div class="post-toc-content always-active">
     <nav id="TableOfContents">
   <ul>
-    <li><a href="#eth-evm理解">ETH-EVM理解</a>
+    <li><a href="#eth-evm">ETH-EVM理解</a>
       <ul>
-        <li><a href="#前言">前言</a></li>
-        <li><a href="#测试合约">测试合约</a></li>
-        <li><a href="#部署到测试链">部署到测试链</a></li>
-        <li><a href="#部署的运行逻辑">部署的运行逻辑</a>
+        <li><a href="#heading">前言</a></li>
+        <li><a href="#heading-1">测试合约</a></li>
+        <li><a href="#heading-2">部署到测试链</a></li>
+        <li><a href="#heading-3">部署的运行逻辑</a>
           <ul>
-            <li><a href="#首先看部署合约产生的交易">首先看部署合约产生的交易</a></li>
-            <li><a href="#代码运行">代码运行</a></li>
-            <li><a href="#总结">总结</a></li>
+            <li><a href="#heading-4">首先看部署合约产生的交易</a></li>
+            <li><a href="#heading-5">代码运行</a></li>
+            <li><a href="#heading-6">总结</a></li>
           </ul>
         </li>
-        <li><a href="#调用的运行逻辑">调用的运行逻辑</a>
+        <li><a href="#heading-7">调用的运行逻辑</a>
           <ul>
-            <li><a href="#调用合约的方法-不上链">调用合约的方法-不上链</a></li>
+            <li><a href="#-">调用合约的方法-不上链</a></li>
             <li><a href="#publicblockchainapicall">PublicBlockChainAPI.Call</a></li>
-            <li><a href="#调用合约的方法-上链">调用合约的方法-上链</a></li>
+            <li><a href="#--1">调用合约的方法-上链</a></li>
+            <li><a href="#heading-10">代码运行</a></li>
+            <li><a href="#heading-11">总结</a></li>
           </ul>
         </li>
-        <li><a href="#evm解释器运行逻辑">EVM解释器运行逻辑</a>
+        <li><a href="#evm">EVM解释器运行逻辑</a>
           <ul>
-            <li><a href="#创建合约的解释过程">创建合约的解释过程</a></li>
-            <li><a href="#执行合约方法的解释过程">执行合约方法的解释过程</a></li>
-            <li><a href="#合约嵌套">合约嵌套</a></li>
+            <li><a href="#heading-12">创建合约的解释过程</a></li>
+            <li><a href="#balanceof-">balanceOf 执行合约方法的解释过程</a></li>
+            <li><a href="#addbalance-">addBalance 执行合约方法的解释过程</a></li>
+            <li><a href="#heading-14">合约嵌套</a></li>
           </ul>
         </li>
-        <li><a href="#关于内部转账">关于内部转账</a></li>
-        <li><a href="#参考">参考</a></li>
+        <li><a href="#heading-15">关于内部转账</a></li>
+        <li><a href="#heading-16">参考</a></li>
       </ul>
     </li>
   </ul>
@@ -184,10 +186,10 @@
   </div>
 </div>
     <div class="post-content">
-      <h1 id="eth-evm理解">ETH-EVM理解</h1>
-<h2 id="前言">前言</h2>
+      <h1 id="eth-evm">ETH-EVM理解</h1>
+<h2 id="heading">前言</h2>
 <p>EVM是以太坊虚拟机，其中<code>EVMIterpreter</code>是运行合约代码的解释器，下面我们通过一个合约来具体分析EVM是如何在以太坊工作的</p>
-<h2 id="测试合约">测试合约</h2>
+<h2 id="heading-1">测试合约</h2>
 <ul>
 <li>以太坊合约是通过<code>solidity</code>语言编写的，经过<code>solidity</code>的编译器编译成字节码，<a href="https://github.com/ethereum/solidity">编译器源码</a></li>
 <li>可以通过<a href="https://github.com/ethereum/remix-project">Remix</a>进行合约代码的编写和部署，<code>remix</code>相当于一个<code>IDE</code>，可以本地部署(推荐)，或者使用<a href="https://remix.ethereum.org/">在线编辑</a></li>
@@ -251,7 +253,7 @@ contract TestContract {
 <pre class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">608060405234801561001057600080fd5b5061038b806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80631a6952301461004657806370a0823114610062578063b5cef24a14610092575b600080fd5b610060600480360381019061005b91906101f8565b6100ae565b005b61007c600480360381019061007791906101cb565b6100f9565b6040516100899190610234565b60405180910390f35b6100ac60048036038101906100a791906101f8565b610141565b005b8073ffffffffffffffffffffffffffffffffffffffff166108fc600a9081150290604051600060405180830381858888f193505050501580156100f5573d6000803e3d6000fd5b5050565b60008060008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020549050919050565b67016345785d8a00006000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254610197919061024f565b9250508190555050565b6000813590506101b081610327565b92915050565b6000813590506101c58161033e565b92915050565b6000602082840312156101e1576101e0610322565b5b60006101ef848285016101a1565b91505092915050565b60006020828403121561020e5761020d610322565b5b600061021c848285016101b6565b91505092915050565b61022e816102e9565b82525050565b60006020820190506102496000830184610225565b92915050565b600061025a826102e9565b9150610265836102e9565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561029a576102996102f3565b5b828201905092915050565b60006102b0826102c9565b9050919050565b60006102c2826102c9565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600080fd5b610330816102a5565b811461033b57600080fd5b50565b610347816102b7565b811461035257600080fd5b5056fea26469706673582212207c6ee6c735b71bb4d176b1ea4c03124eb5e228d1bc2e576cc1beea2ef4ed0a5564736f6c63430008070033
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">608060405234801561001057600080fd5b5061038b806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80631a6952301461004657806370a0823114610062578063b5cef24a14610092575b600080fd5b610060600480360381019061005b91906101f8565b6100ae565b005b61007c600480360381019061007791906101cb565b6100f9565b6040516100899190610234565b60405180910390f35b6100ac60048036038101906100a791906101f8565b610141565b005b8073ffffffffffffffffffffffffffffffffffffffff166108fc600a9081150290604051600060405180830381858888f193505050501580156100f5573d6000803e3d6000fd5b5050565b60008060008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020549050919050565b67016345785d8a00006000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254610197919061024f565b9250508190555050565b6000813590506101b081610327565b92915050565b6000813590506101c58161033e565b92915050565b6000602082840312156101e1576101e0610322565b5b60006101ef848285016101a1565b91505092915050565b60006020828403121561020e5761020d610322565b5b600061021c848285016101b6565b91505092915050565b61022e816102e9565b82525050565b60006020820190506102496000830184610225565b92915050565b600061025a826102e9565b9150610265836102e9565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561029a576102996102f3565b5b828201905092915050565b60006102b0826102c9565b9050919050565b60006102c2826102c9565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600080fd5b610330816102a5565b811461033b57600080fd5b50565b610347816102b7565b811461035257600080fd5b5056fea2646970667358221220379c537446a8d2ba546abc18269ab68941e5818a4966a02c7311b66cdd7763c164736f6c63430008070033
 </code></pre></td></tr></table>
 </div>
 </div><p>字节码可以根据<code>jumpTable</code>翻译成特定的操作（op），是由1个字节组成（有些是参数，不一定是1个字节），上面的字节码可以翻译成如下的操作码</p>
@@ -260,12 +262,12 @@ contract TestContract {
 <pre class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH2 0x38B DUP1 PUSH2 0x20 PUSH1 0x0 CODECOPY PUSH1 0x0 RETURN INVALID PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH1 0x4 CALLDATASIZE LT PUSH2 0x41 JUMPI PUSH1 0x0 CALLDATALOAD PUSH1 0xE0 SHR DUP1 PUSH4 0x1A695230 EQ PUSH2 0x46 JUMPI DUP1 PUSH4 0x70A08231 EQ PUSH2 0x62 JUMPI DUP1 PUSH4 0xB5CEF24A EQ PUSH2 0x92 JUMPI JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x60 PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x5B SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0xAE JUMP JUMPDEST STOP JUMPDEST PUSH2 0x7C PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x77 SWAP2 SWAP1 PUSH2 0x1CB JUMP JUMPDEST PUSH2 0xF9 JUMP JUMPDEST PUSH1 0x40 MLOAD PUSH2 0x89 SWAP2 SWAP1 PUSH2 0x234 JUMP JUMPDEST PUSH1 0x40 MLOAD DUP1 SWAP2 SUB SWAP1 RETURN JUMPDEST PUSH2 0xAC PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0xA7 SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0x141 JUMP JUMPDEST STOP JUMPDEST DUP1 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH2 0x8FC PUSH1 0xA SWAP1 DUP2 ISZERO MUL SWAP1 PUSH1 0x40 MLOAD PUSH1 0x0 PUSH1 0x40 MLOAD DUP1 DUP4 SUB DUP2 DUP6 DUP9 DUP9 CALL SWAP4 POP POP POP POP ISZERO DUP1 ISZERO PUSH2 0xF5 JUMPI RETURNDATASIZE PUSH1 0x0 DUP1 RETURNDATACOPY RETURNDATASIZE PUSH1 0x0 REVERT JUMPDEST POP POP JUMP JUMPDEST PUSH1 0x0 DUP1 PUSH1 0x0 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 SLOAD SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH8 0x16345785D8A0000 PUSH1 0x0 DUP1 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 PUSH1 0x0 DUP3 DUP3 SLOAD PUSH2 0x197 SWAP2 SWAP1 PUSH2 0x24F JUMP JUMPDEST SWAP3 POP POP DUP2 SWAP1 SSTORE POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1B0 DUP2 PUSH2 0x327 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1C5 DUP2 PUSH2 0x33E JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x1E1 JUMPI PUSH2 0x1E0 PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x1EF DUP5 DUP3 DUP6 ADD PUSH2 0x1A1 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x20E JUMPI PUSH2 0x20D PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x21C DUP5 DUP3 DUP6 ADD PUSH2 0x1B6 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH2 0x22E DUP2 PUSH2 0x2E9 JUMP JUMPDEST DUP3 MSTORE POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 ADD SWAP1 POP PUSH2 0x249 PUSH1 0x0 DUP4 ADD DUP5 PUSH2 0x225 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x25A DUP3 PUSH2 0x2E9 JUMP JUMPDEST SWAP2 POP PUSH2 0x265 DUP4 PUSH2 0x2E9 JUMP JUMPDEST SWAP3 POP DUP3 PUSH32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF SUB DUP3 GT ISZERO PUSH2 0x29A JUMPI PUSH2 0x299 PUSH2 0x2F3 JUMP JUMPDEST JUMPDEST DUP3 DUP3 ADD SWAP1 POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2B0 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2C2 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF DUP3 AND SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 DUP2 SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH32 0x4E487B7100000000000000000000000000000000000000000000000000000000 PUSH1 0x0 MSTORE PUSH1 0x11 PUSH1 0x4 MSTORE PUSH1 0x24 PUSH1 0x0 REVERT JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x330 DUP2 PUSH2 0x2A5 JUMP JUMPDEST DUP2 EQ PUSH2 0x33B JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP JUMPDEST PUSH2 0x347 DUP2 PUSH2 0x2B7 JUMP JUMPDEST DUP2 EQ PUSH2 0x352 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 PUSH29 0x6EE6C735B71BB4D176B1EA4C03124EB5E228D1BC2E576CC1BEEA2EF4ED EXP SSTORE PUSH5 0x736F6C6343 STOP ADDMOD SMOD STOP CALLER
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH2 0x38B DUP1 PUSH2 0x20 PUSH1 0x0 CODECOPY PUSH1 0x0 RETURN INVALID PUSH1 0x80 PUSH1 0x40 MSTORE CALLVALUE DUP1 ISZERO PUSH2 0x10 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP PUSH1 0x4 CALLDATASIZE LT PUSH2 0x41 JUMPI PUSH1 0x0 CALLDATALOAD PUSH1 0xE0 SHR DUP1 PUSH4 0x1A695230 EQ PUSH2 0x46 JUMPI DUP1 PUSH4 0x70A08231 EQ PUSH2 0x62 JUMPI DUP1 PUSH4 0xB5CEF24A EQ PUSH2 0x92 JUMPI JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x60 PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x5B SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0xAE JUMP JUMPDEST STOP JUMPDEST PUSH2 0x7C PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0x77 SWAP2 SWAP1 PUSH2 0x1CB JUMP JUMPDEST PUSH2 0xF9 JUMP JUMPDEST PUSH1 0x40 MLOAD PUSH2 0x89 SWAP2 SWAP1 PUSH2 0x234 JUMP JUMPDEST PUSH1 0x40 MLOAD DUP1 SWAP2 SUB SWAP1 RETURN JUMPDEST PUSH2 0xAC PUSH1 0x4 DUP1 CALLDATASIZE SUB DUP2 ADD SWAP1 PUSH2 0xA7 SWAP2 SWAP1 PUSH2 0x1F8 JUMP JUMPDEST PUSH2 0x141 JUMP JUMPDEST STOP JUMPDEST DUP1 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH2 0x8FC PUSH1 0xA SWAP1 DUP2 ISZERO MUL SWAP1 PUSH1 0x40 MLOAD PUSH1 0x0 PUSH1 0x40 MLOAD DUP1 DUP4 SUB DUP2 DUP6 DUP9 DUP9 CALL SWAP4 POP POP POP POP ISZERO DUP1 ISZERO PUSH2 0xF5 JUMPI RETURNDATASIZE PUSH1 0x0 DUP1 RETURNDATACOPY RETURNDATASIZE PUSH1 0x0 REVERT JUMPDEST POP POP JUMP JUMPDEST PUSH1 0x0 DUP1 PUSH1 0x0 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 SLOAD SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH8 0x16345785D8A0000 PUSH1 0x0 DUP1 DUP4 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF AND DUP2 MSTORE PUSH1 0x20 ADD SWAP1 DUP2 MSTORE PUSH1 0x20 ADD PUSH1 0x0 KECCAK256 PUSH1 0x0 DUP3 DUP3 SLOAD PUSH2 0x197 SWAP2 SWAP1 PUSH2 0x24F JUMP JUMPDEST SWAP3 POP POP DUP2 SWAP1 SSTORE POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1B0 DUP2 PUSH2 0x327 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 DUP2 CALLDATALOAD SWAP1 POP PUSH2 0x1C5 DUP2 PUSH2 0x33E JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x1E1 JUMPI PUSH2 0x1E0 PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x1EF DUP5 DUP3 DUP6 ADD PUSH2 0x1A1 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 DUP5 SUB SLT ISZERO PUSH2 0x20E JUMPI PUSH2 0x20D PUSH2 0x322 JUMP JUMPDEST JUMPDEST PUSH1 0x0 PUSH2 0x21C DUP5 DUP3 DUP6 ADD PUSH2 0x1B6 JUMP JUMPDEST SWAP2 POP POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH2 0x22E DUP2 PUSH2 0x2E9 JUMP JUMPDEST DUP3 MSTORE POP POP JUMP JUMPDEST PUSH1 0x0 PUSH1 0x20 DUP3 ADD SWAP1 POP PUSH2 0x249 PUSH1 0x0 DUP4 ADD DUP5 PUSH2 0x225 JUMP JUMPDEST SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x25A DUP3 PUSH2 0x2E9 JUMP JUMPDEST SWAP2 POP PUSH2 0x265 DUP4 PUSH2 0x2E9 JUMP JUMPDEST SWAP3 POP DUP3 PUSH32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF SUB DUP3 GT ISZERO PUSH2 0x29A JUMPI PUSH2 0x299 PUSH2 0x2F3 JUMP JUMPDEST JUMPDEST DUP3 DUP3 ADD SWAP1 POP SWAP3 SWAP2 POP POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2B0 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH2 0x2C2 DUP3 PUSH2 0x2C9 JUMP JUMPDEST SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 PUSH20 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF DUP3 AND SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH1 0x0 DUP2 SWAP1 POP SWAP2 SWAP1 POP JUMP JUMPDEST PUSH32 0x4E487B7100000000000000000000000000000000000000000000000000000000 PUSH1 0x0 MSTORE PUSH1 0x11 PUSH1 0x4 MSTORE PUSH1 0x24 PUSH1 0x0 REVERT JUMPDEST PUSH1 0x0 DUP1 REVERT JUMPDEST PUSH2 0x330 DUP2 PUSH2 0x2A5 JUMP JUMPDEST DUP2 EQ PUSH2 0x33B JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP JUMPDEST PUSH2 0x347 DUP2 PUSH2 0x2B7 JUMP JUMPDEST DUP2 EQ PUSH2 0x352 JUMPI PUSH1 0x0 DUP1 REVERT JUMPDEST POP JUMP INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 CALLDATACOPY SWAP13 MSTORE8 PUSH21 0x46A8D2BA546ABC18269AB68941E5818A4966A02C73 GT 0xB6 PUSH13 0xDD7763C164736F6C6343000807 STOP CALLER
 </code></pre></td></tr></table>
 </div>
 </div></li>
 </ol>
-<h2 id="部署到测试链">部署到测试链</h2>
+<h2 id="heading-2">部署到测试链</h2>
 <ol>
 <li>这里可以通过<code>Remix</code>进行部署，其中有3种方式
 <ol>
@@ -276,8 +278,8 @@ contract TestContract {
 </li>
 <li>这里我DEBUG了一个ETH测试链，然后本地跑起来，再通过<code>Web3 Provider</code>的形式直连，这样就可以很方便的进行DEBUG了，具体流程可以谷歌</li>
 </ol>
-<h2 id="部署的运行逻辑">部署的运行逻辑</h2>
-<h3 id="首先看部署合约产生的交易">首先看部署合约产生的交易</h3>
+<h2 id="heading-3">部署的运行逻辑</h2>
+<h3 id="heading-4">首先看部署合约产生的交易</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt"> 1
@@ -311,7 +313,7 @@ contract TestContract {
 </code></pre></td></tr></table>
 </div>
 </div><p>所以当to是nil时，是一个创建合约的交易</p>
-<h3 id="代码运行">代码运行</h3>
+<h3 id="heading-5">代码运行</h3>
 <p>省略交易传递的种种，我们直接到交易运行处</p>
 <ol>
 <li>
@@ -458,17 +460,17 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 </div>
 </div></li>
 </ol>
-<h3 id="总结">总结</h3>
+<h3 id="heading-6">总结</h3>
 <ol>
 <li>可以看到创建合约的交易是通过<code>to=nil</code>来标记的</li>
 <li>可以通过发送者的<code>address+nonce</code>计算合约地址</li>
 <li>合约最终会通过解释器运行</li>
 </ol>
-<h2 id="调用的运行逻辑">调用的运行逻辑</h2>
+<h2 id="heading-7">调用的运行逻辑</h2>
 <p>首先我们通过调用<code>balanceOf()</code>这个方法看一下合约调用逻辑</p>
-<h3 id="调用合约的方法-不上链">调用合约的方法-不上链</h3>
+<h3 id="-">调用合约的方法-不上链</h3>
 <p>在调用balanceOf之后，我们发现并没有在<code>EthAPIBackend.SendTx</code>处捕获到断点，查看<code>remix</code>状态，发现
-调用的是eth_call这个api，通过检查注册的API，最终在<code>PublicBlockChainAPI.Call</code>找到了方法</p>
+调用的是eth_call这个api，通过检查注册的API，最终在<code>PublicBlockChainAPI.Call</code>找到了方法，然后通过<code>core.ApplyMessage</code>来执行调用</p>
 <h3 id="publicblockchainapicall">PublicBlockChainAPI.Call</h3>
 <p>简而言之，Call方法主要是进行不上链的操作调用，直接从数据库获取状态，首先看一下传入的参数</p>
 <div class="highlight"><div class="chroma">
@@ -502,7 +504,31 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 </code></pre></td></tr></table>
 </div>
 </div><p>其中data字段包含了调用的合约方法和参数</p>
-<h4 id="方法和参数生成">方法和参数生成</h4>
+<ol>
+<li>st.evm.Call运行合约
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// 直接转账，如果value是0也会进行调用
+// 所以如果调用合约时value的值不为0，则会被发送到合约的地址下
+evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+// 获取合约的字节码
+code := evm.StateDB.GetCode(addr)
+// 执行合约
+ret, err = evm.interpreter.Run(contract, input, false)
+</code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h4 id="heading-8">方法和参数生成</h4>
 <p>data字段的值是由方法和参数组成的，其中方法名为</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -527,20 +553,121 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 </code></pre></td></tr></table>
 </div>
 </div><p>更复杂的拼接逻辑说明请看<a href="https://solidity-cn.readthedocs.io/zh/develop/abi-spec.html">官方文档</a></p>
-<h3 id="调用合约的方法-上链">调用合约的方法-上链</h3>
+<h3 id="--1">调用合约的方法-上链</h3>
 <p>接下来我们调用<code>addBalance()</code>这个方法来进行上链数据的调用，看一下代码运行。</p>
-<h4 id="todo-交易结构">TODO 交易结构</h4>
+<h4 id="heading-9">交易结构</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">{
+    &#34;type&#34;:&#34;0x2&#34;,
+    &#34;nonce&#34;:&#34;0x1&#34;,
+    &#34;gasPrice&#34;:null,
+    &#34;maxPriorityFeePerGas&#34;:&#34;0x3b9aca00&#34;,
+    &#34;maxFeePerGas&#34;:&#34;0x77359400&#34;,
+    &#34;gas&#34;:&#34;0xad20&#34;,
+    &#34;value&#34;:&#34;0x0&#34;,
+    &#34;input&#34;:&#34;0xb5cef24a000000000000000000000000d80e810da222e282112f601f35040a24da7f770e&#34;,
+    &#34;to&#34;:&#34;0x950c9afb7d324c0f645e2ba53059d11e2437518b&#34;,
+    &#34;chainId&#34;:&#34;0x7c8&#34;,
+    &#34;hash&#34;:&#34;0xe87dd5ce0930b8cddd1c573ed819f675cc585ab9c009670b8f270d92bb064677&#34;
+}
 </code></pre></td></tr></table>
 </div>
-</div><h2 id="evm解释器运行逻辑">EVM解释器运行逻辑</h2>
+</div><p>可以看到这里的to是合约地址，然后input是合约方法和参数</p>
+<h3 id="heading-10">代码运行</h3>
+<p>上面我们已经知道，在TransitionDb时进行的判断，当to不是nil时，进行st.evm.Call调用</p>
+<ol>
+<li>st.evm.Call
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// core/vm/evm.go
+func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+  // 往合约地址转账
+  evm.Context.Transfer(evm.StateDB, caller.Address(), addr, value)
+  // 从数据库获取CODE，是创建时存入的
+  code := evm.StateDB.GetCode(addr)
+  // 新建一个合约对象
+  contract := NewContract(caller, AccountRef(addrCopy), value, gas)
+  // 设置code
+  contract.SetCallCode(&amp;addrCopy, evm.StateDB.GetCodeHash(addrCopy), code)
+  // 解释器运行，此时input不为空
+  ret, err = evm.interpreter.Run(contract, input, false)
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+<li>evm.interpreter.Run解释器
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">// core/vm/interpreter.go
+func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
+  // 计数器，用来表示读取的code下标
+  pc = uint64(0) // program counter
+  // 获取操作码
+  op = contract.GetOp(pc)
+  // 根据操作码获取对应的操作对象
+  operation := in.cfg.JumpTable[op]
+  // 运行操作对象的execute方法
+  // 这个方法是最重要的，具体需要查看JumpTable里对应的方法
+  res, err = operation.execute(&amp;pc, in, callContext)
+}
+</code></pre></td></tr></table>
+</div>
+</div></li>
+</ol>
+<h3 id="heading-11">总结</h3>
+<ol>
+<li>当to和input不为空时进行合约调用</li>
+<li>合约调用需要interpreter解释器来运行</li>
+<li>最终是根据操作码的execute方法一步一步的执行</li>
+</ol>
+<h2 id="evm">EVM解释器运行逻辑</h2>
 <p>解释器相当于根据字节码一个字节一个字节的解析，下面我们来分下一下上面合约的解释过程</p>
-<h3 id="创建合约的解释过程">创建合约的解释过程</h3>
+<h3 id="heading-12">创建合约的解释过程</h3>
 <p>index表示字节码下表，ops表示字节翻译成的操作码（具体可以看jumpTable)</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -585,9 +712,193 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 </code></pre></td></tr></table>
 </div>
 </div><p>到这里创建合约的代码就执行完毕了，后面在EVM中会将ret保存在数据库中。所以调用时执行合约的代码是在return之后的字节码，创建只是初始化一些全局变量等。</p>
-<h3 id="执行合约方法的解释过程">执行合约方法的解释过程</h3>
-<h3 id="合约嵌套">合约嵌套</h3>
-<h2 id="关于内部转账">关于内部转账</h2>
+<h3 id="balanceof-">balanceOf 执行合约方法的解释过程</h3>
+<p>我们首先通过上面的<code>balanceOf</code>来看一下合约调用时的解释过程</p>
+<h4 id="input">input</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">0x70a082310000000000000000000000008d07a5ba716a12a435ec31303049ebf81ca08cc6
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="heading-13">执行过程</h4>
+<p>首先是从数据库加载<code>CODE</code>，注意此时的<code>CODE</code>是创建时的<code>ret</code>，即创建时传入的<code>data[32:]</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+0-1         PUSH1 0x80      
+2-3         PUSH1 0x40 
+4           MSTORE 
+5           CALLVALUE 
+6           DUP1 
+7           ISZERO 
+8-10        PUSH2 0x10 
+11          JUMPI            // pop两个值，第一个0x10作为offset，跳转到offset
+16          JUMPDEST 
+17          POP
+18-19       PUSH1 0x4 
+20          CALLDATASIZE     // 将我们输入的input的长度的值(36)压入栈 
+21          LT               // 栈取出input的长度值与栈顶元素比较（0x4），如果小于，栈顶元素0x4变为0x1，否则变为0x0
+22-24       PUSH2 0x41      
+25          JUMPI            // offset=0x41(十进制为65)，由于cond为0， 所以此时不跳转
+26-27       PUSH1 0x0
+28          CALLDATALOAD     // 获取input[:32]存入当前的栈顶元素内 
+29-30       PUSH1 0xE0      
+31          SHR              // 将CALLDATALOAD设置的值右移动224（0xE0）位。因为32个字节中只使用了4个字节，所以是224位  
+32          DUP1           
+33-37       PUSH4 0x1A695230 // 将1A695230压入栈中 
+38          EQ               // pop 1A695230的值，并与栈顶元素比较（即input[:32])，如果相等，将栈顶值设为1，否则，设置为0，这里设置为0，因为不等
+39-41       PUSH2 0x46        
+42          JUMPI            // pop offset和cond，由于cond为0，所以不跳转
+43          DUP1 
+44-48       PUSH4 0x70A08231 // 放入栈顶
+49          EQ               // 比较input[:32]和0x70A08231，这里相等，所以将值设置为1
+50-52       PUSH2 0x62       // 设置跳转的offset 
+53          JUMPI            // 由于EQ相等，所以cond为1，所以跳转到0x62(十进制为98)处
+98          JUMPDEST
+99-101      PUSH2 0x7C
+102-103     PUSH1 0x4 
+104         DUP1
+105         CALLDATASIZE     // 将input的长度放入栈顶
+106         SUB              // pop长度，然后将栈顶元素赋值为长度-栈顶元素，可以理解为减去函数方法占用的4个字节
+107         DUP2             // 将从栈顶数的第2个元素压入栈
+108         ADD              // pop出栈顶元素，再将栈顶元素设置为其与栈顶元素相加的值
+109         SWAP1            // 将栈顶元素与从栈顶数的第2(1+1)个元素交换
+110-112     PUSH2 0x77
+113         SWAP2 
+114         SWAP1 
+115-117     PUSH2 0x1CB
+118         JUMP             // pop栈顶元素，然后跳转到值的index处（1cb=459）
+459         JUMPDEST
+460-461     PUSH1 0x0 
+462-463     PUSH1 0x20 
+464         DUP3 
+465         DUP5 
+466         SUB 
+467         SLT              // pop栈顶元素，然后与栈顶元素比较，如果小于，则设置栈顶元素为1，否则为0，这里是false，则设置为0 
+468         ISZERO           // 判断栈顶元素是否为0，为0则设置为1
+469-471     PUSH2 0x1E1 
+472         JUMPI            // offset=0x1E1，cond=1，所以跳转到 0x1e1
+481         JUMPDEST 
+482-483     PUSH1 0x0 
+484-486     PUSH2 0x1EF 
+487         DUP5 
+488         DUP3 
+489         DUP6 
+490         ADD 
+491-493     PUSH2 0x1A1 
+494         JUMP             // 跳转到0x1A1 
+417         JUMPDEST          
+418-419     PUSH1 0x0 
+420         DUP2 
+421         CALLDATALOAD     // 加载input[4:]的数据到栈顶
+。。。省略步骤，太多了直接来重点
+313         SHA3             // 将memory[0]进行hash，获取数据库的key，实质上是用户的地址+私有变量的下标
+314         SLOAD            // 通过statedb查找上面的hash后的key的值
+145         RETURN           // 获取memory中保存的值，然后返回
+
+</code></pre></td></tr></table>
+</div>
+</div><p>调用一次查询余额的操作其实还蛮复杂的，会各种跳转，但关键操作是<code>SHA3</code>和<code>SLOAD</code>，首先是数据库中存储用户数据的key是如何来的。通过查看SHA3的方法，
+可以看到Key是由用户address+变量下标得来的。所以当前的是key=hash(address+0)，所以从数据库（这个合约的）中搜索key对应的value值返回</p>
+<h3 id="addbalance-">addBalance 执行合约方法的解释过程</h3>
+<p>现在看一下存在对合约操作的解释过程，这次我们只看重点</p>
+<h4 id="input-1">input</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">0xb5cef24a000000000000000000000000d80e810da222e282112f601f35040a24da7f770e
+</code></pre></td></tr></table>
+</div>
+</div><h4 id="todo-">TODO 执行过程</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">:index      :ops             :comment
+</code></pre></td></tr></table>
+</div>
+</div><h3 id="heading-14">合约嵌套</h3>
+<h2 id="heading-15">关于内部转账</h2>
 <p>内部转账的实现可以通过以下三种方式</p>
 <ol>
 <li>transfer (2300 gas, throws error)</li>
@@ -595,7 +906,7 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 <li>call (forward all gas or set gas, returns bool)</li>
 </ol>
 <p>本质上<code>transfer</code>和<code>send</code>会被编译器编译成<code>call</code></p>
-<h2 id="参考">参考</h2>
+<h2 id="heading-16">参考</h2>
 <ul>
 <li><a href="https://www.jianshu.com/p/230c6d805560">https://www.jianshu.com/p/230c6d805560</a></li>
 <li><a href="https://solidity-by-example.org/sending-ether/">https://solidity-by-example.org/sending-ether/</a></li>
