@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>关于我 - chuwt&#39;s blog</title>
+  <title>Multicall使用和原理 - chuwt&#39;s blog</title>
   <meta name="renderer" content="webkit" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 
@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<meta name="author" content="chuwt" /><meta name="description" content="I&amp;rsquo;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com." /><meta name="keywords" content="chuwt, go, golang, blog" />
+<meta name="author" content="chuwt" /><meta name="description" content="前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关" /><meta name="keywords" content="chuwt, go, golang, blog" />
 
 
 
@@ -26,7 +26,7 @@
 <meta name="generator" content="Hugo 0.80.0 with theme even" />
 
 
-<link rel="canonical" href="https://chuwt.github.io/about/" />
+<link rel="canonical" href="https://chuwt.github.io/post/%E6%80%BB%E7%BB%93%E4%B8%80%E4%B8%8B/" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -39,24 +39,24 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
-<meta property="og:title" content="关于我" />
-<meta property="og:description" content="I&rsquo;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com." />
+<meta property="og:title" content="Multicall使用和原理" />
+<meta property="og:description" content="前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://chuwt.github.io/about/" />
-<meta property="article:published_time" content="2021-08-20T21:38:52+08:00" />
-<meta property="article:modified_time" content="2021-10-23T09:05:26+08:00" />
-<meta itemprop="name" content="关于我">
-<meta itemprop="description" content="I&rsquo;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com.">
-<meta itemprop="datePublished" content="2021-08-20T21:38:52+08:00" />
-<meta itemprop="dateModified" content="2021-10-23T09:05:26+08:00" />
-<meta itemprop="wordCount" content="36">
+<meta property="og:url" content="https://chuwt.github.io/post/%E6%80%BB%E7%BB%93%E4%B8%80%E4%B8%8B/" />
+<meta property="article:published_time" content="2021-12-02T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-12-02T00:00:00+00:00" />
+<meta itemprop="name" content="Multicall使用和原理">
+<meta itemprop="description" content="前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关">
+<meta itemprop="datePublished" content="2021-12-02T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2021-12-02T00:00:00+00:00" />
+<meta itemprop="wordCount" content="106">
 
 
 
-<meta itemprop="keywords" content="" />
+<meta itemprop="keywords" content="合约,Blockchain,Solidity," />
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="关于我"/>
-<meta name="twitter:description" content="I&rsquo;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com."/>
+<meta name="twitter:title" content="Multicall使用和原理"/>
+<meta name="twitter:description" content="前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关"/>
 
 <!--[if lte IE 9]>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
@@ -131,17 +131,81 @@
       <div class="content-wrapper">
         <div id="content" class="content">
           <article class="post">
-  <div class="post-content">
-    <p>I&rsquo;m <strong>Chuwt</strong>, focusing on <code>Blockchain</code> and <code>Backend</code>.</p>
-<p>Good at <code>Go</code> and <code>Python</code>.</p>
-<p>Contributor of <a href="https://github.com/ethereum/go-ethereum">Ethereum</a>, <a href="https://github.com/ethersphere/bee">Bee</a> and <a href="https://github.com/Chia-Network/chia-blockchain">Chia</a>.</p>
-<p>Now working for <a href="https://www.flexpool.io/">Flexpool</a> (Thanks for Alex).</p>
-<p>Loving <strong>OpenSource</strong> and <strong>life</strong>.</p>
-<p>Visiting my <a href="https://github.com/chuwt">Github</a>.</p>
-<p>Contacting me by <a href="mailto:weitaochu@gmail.com">weitaochu@gmail.com</a>.</p>
+    
+    <header class="post-header">
+      <h1 class="post-title">Multicall使用和原理</h1>
 
+      <div class="post-meta">
+        <span class="post-time"> 2021-12-02 </span>
+        
+          <span class="more-meta"> 约 106 字 </span>
+          <span class="more-meta"> 预计阅读 1 分钟 </span>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">文章目录</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#前言">前言</a></li>
+        <li><a href="#开始之前需要知道的关于-eth-jsonrpc的事情">开始之前需要知道的关于 ETH-JsonRPC的事情</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
   </div>
-</article>
+</div>
+    <div class="post-content">
+      <h2 id="前言">前言</h2>
+<p>公司的小伙伴在做一些数据分析的时候用到了<code>multicall</code>，于是就研究了一下，分享一下multicall的使用和原理</p>
+<h2 id="开始之前需要知道的关于-eth-jsonrpc的事情">开始之前需要知道的关于 ETH-JsonRPC的事情</h2>
+<p>ETH提供两种调用合约的方法：</p>
+<ul>
+<li>eth_sendTransaction
+<ul>
+<li>这种方法</li>
+</ul>
+</li>
+<li>eth_call</li>
+</ul>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">文章作者</span>
+    <span class="item-content">chuwt</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">上次更新</span>
+    <span class="item-content">
+        2021-12-02
+        
+    </span>
+  </p>
+  
+  
+</div>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/%E5%90%88%E7%BA%A6/">合约</a>
+          <a href="/tags/blockchain/">Blockchain</a>
+          <a href="/tags/solidity/">Solidity</a>
+          </div>
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/">
+            <span class="next-text nav-default">EVM运行原理</span>
+            <span class="next-text nav-mobile">下一篇</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
         </div>
         
 

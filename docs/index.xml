@@ -6,18 +6,14 @@
     <description>Recent content on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 18 Oct 2021 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://chuwt.github.io/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 02 Dec 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://chuwt.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>关于我</title>
       <link>https://chuwt.github.io/about/</link>
       <pubDate>Fri, 20 Aug 2021 21:38:52 +0800</pubDate>
       
       <guid>https://chuwt.github.io/about/</guid>
-      <description>I&#39;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com.</description>
+      <description>I&amp;rsquo;m Chuwt, focusing on Blockchain and Backend. Good at Go and Python. Contributor of Ethereum, Bee and Chia. Now working for Flexpool (Thanks for Alex). Loving OpenSource and life. Visiting my Github. Contacting me by weitaochu@gmail.com.</description>
     </item>
     
     <item>
@@ -27,6 +23,15 @@
       
       <guid>https://chuwt.github.io/melon/</guid>
       <description>不定时分享互联网趣事，丰富摸鱼生活 V2EX[开撕] 现在在 github 开源项目上不回答别人的问题，都是错了么？并且还是错的很严重的那种么？ V2EX关于青</description>
+    </item>
+    
+    <item>
+      <title>Multicall使用和原理</title>
+      <link>https://chuwt.github.io/post/%E6%80%BB%E7%BB%93%E4%B8%80%E4%B8%8B/</link>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/post/%E6%80%BB%E7%BB%93%E4%B8%80%E4%B8%8B/</guid>
+      <description>前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关</description>
     </item>
     
     <item>

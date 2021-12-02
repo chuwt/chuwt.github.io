@@ -6,22 +6,36 @@
     <description>Recent content in Tags on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 18 Oct 2021 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://chuwt.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 02 Dec 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://chuwt.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Blockchain</title>
+      <title>blockchain</title>
       <link>https://chuwt.github.io/tags/blockchain/</link>
-      <pubDate>Mon, 18 Oct 2021 00:00:00 +0000</pubDate>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
       
       <guid>https://chuwt.github.io/tags/blockchain/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>ETH</title>
+      <title>Solidity</title>
+      <link>https://chuwt.github.io/tags/solidity/</link>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/tags/solidity/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>合约</title>
+      <link>https://chuwt.github.io/tags/%E5%90%88%E7%BA%A6/</link>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://chuwt.github.io/tags/%E5%90%88%E7%BA%A6/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>eth</title>
       <link>https://chuwt.github.io/tags/eth/</link>
       <pubDate>Mon, 18 Oct 2021 00:00:00 +0000</pubDate>
       
