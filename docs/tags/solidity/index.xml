@@ -16,14 +16,5 @@
       <description>UniSwap-v2 源码阅读 源码分布 v2-core v2-periphery 规则 使用A*B这个固定数值进行计算 入口 入口在v2-periphery处，可以先看看简单的一些方法 addLiquidity 添加流动性方法 1 2 3</description>
     </item>
     
-    <item>
-      <title>Multicall使用和原理 (WIP)</title>
-      <link>https://chuwt.github.io/post/multicall%E4%BD%BF%E7%94%A8%E5%92%8C%E5%8E%9F%E7%90%86wip/</link>
-      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
-      
-      <guid>https://chuwt.github.io/post/multicall%E4%BD%BF%E7%94%A8%E5%92%8C%E5%8E%9F%E7%90%86wip/</guid>
-      <description>前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关</description>
-    </item>
-    
   </channel>
 </rss>

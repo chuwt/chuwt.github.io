@@ -17,15 +17,6 @@
     </item>
     
     <item>
-      <title>Multicall使用和原理 (WIP)</title>
-      <link>https://chuwt.github.io/post/multicall%E4%BD%BF%E7%94%A8%E5%92%8C%E5%8E%9F%E7%90%86wip/</link>
-      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
-      
-      <guid>https://chuwt.github.io/post/multicall%E4%BD%BF%E7%94%A8%E5%92%8C%E5%8E%9F%E7%90%86wip/</guid>
-      <description>前言 公司的小伙伴在做一些数据分析的时候用到了multicall，于是就研究了一下，分享一下multicall的使用和原理 开始之前需要知道的关</description>
-    </item>
-    
-    <item>
       <title>EVM运行原理</title>
       <link>https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/</link>
       <pubDate>Mon, 18 Oct 2021 00:00:00 +0000</pubDate>
