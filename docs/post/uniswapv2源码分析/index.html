@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>UniswapV2源码分析 - chuwt&#39;s blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="chuwt" /><meta name="description" content="UniSwap-v2 源码阅读 源码分布 v2-core v2-periphery 规则 使用A*B这个固定数值进行计算 入口 入口在v2-periphery处，可以先看看简单的一些方法 addLiquidity 添加流动性方法 1 2 3" /><meta name="keywords" content="chuwt, go, golang, blog" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.80.0 with theme even" />
+
+
+<link rel="canonical" href="https://chuwt.github.io/post/uniswapv2%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.2e81bbed97b8b282c1aeb57488cc71c8d8c8ec559f3931531bd396bf31e0d4dd.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="UniswapV2源码分析" />
+<meta property="og:description" content="UniSwap-v2 源码阅读 源码分布 v2-core v2-periphery 规则 使用A*B这个固定数值进行计算 入口 入口在v2-periphery处，可以先看看简单的一些方法 addLiquidity 添加流动性方法 1 2 3" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://chuwt.github.io/post/uniswapv2%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" />
+<meta property="article:published_time" content="2021-12-17T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-12-17T00:00:00+00:00" />
+<meta itemprop="name" content="UniswapV2源码分析">
+<meta itemprop="description" content="UniSwap-v2 源码阅读 源码分布 v2-core v2-periphery 规则 使用A*B这个固定数值进行计算 入口 入口在v2-periphery处，可以先看看简单的一些方法 addLiquidity 添加流动性方法 1 2 3">
+<meta itemprop="datePublished" content="2021-12-17T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2021-12-17T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1649">
+
+
+
+<meta itemprop="keywords" content="合约,Blockchain,Solidity," />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="UniswapV2源码分析"/>
+<meta name="twitter:description" content="UniSwap-v2 源码阅读 源码分布 v2-core v2-periphery 规则 使用A*B这个固定数值进行计算 入口 入口在v2-periphery处，可以先看看简单的一些方法 addLiquidity 添加流动性方法 1 2 3"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">Chuwt&#39;s Blog</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">首页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于我</li>
+      </a><a href="/melon/">
+        <li class="mobile-menu-item">圈子</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">Chuwt&#39;s Blog</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">首页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于我</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/melon/">圈子</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">UniswapV2源码分析</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2021-12-17 </span>
+        
+          <span class="more-meta"> 约 1649 字 </span>
+          <span class="more-meta"> 预计阅读 4 分钟 </span>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">文章目录</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#uniswap-v2-源码阅读">UniSwap-v2 源码阅读</a>
+      <ul>
+        <li><a href="#源码分布">源码分布</a></li>
+        <li><a href="#规则">规则</a></li>
+        <li><a href="#入口">入口</a>
+          <ul>
+            <li><a href="#addliquidity">addLiquidity</a></li>
+            <li><a href="#removeliquidity">removeLiquidity</a></li>
+            <li><a href="#swapexacttokensfortokens">swapExactTokensForTokens</a></li>
+            <li><a href="#swaptokensforexacttokens">swapTokensForExactTokens</a></li>
+          </ul>
+        </li>
+        <li><a href="#总结">总结</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="uniswap-v2-源码阅读">UniSwap-v2 源码阅读</h1>
+<h2 id="源码分布">源码分布</h2>
+<ul>
+<li><a href="https://github.com/Uniswap/v2-core">v2-core</a></li>
+<li><a href="https://github.com/Uniswap/v2-periphery">v2-periphery</a></li>
+</ul>
+<h2 id="规则">规则</h2>
+<p>使用A*B这个固定数值进行计算</p>
+<h2 id="入口">入口</h2>
+<p>入口在v2-periphery处，可以先看看简单的一些方法</p>
+<h3 id="addliquidity">addLiquidity</h3>
+<ul>
+<li>添加流动性方法</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external virtual override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
+        (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
+        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
+        TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
+        TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
+        liquidity = IUniswapV2Pair(pair).mint(to);
+    }
+</code></pre></td></tr></table>
+</div>
+</div><p>流程说明</p>
+<ol>
+<li>调用私有方法_addLiquidity计算要添加的tokenA和tokenB的amount
+<ol>
+<li>通过<code>factory合约</code>获取pair是否存在，不存在则通过createPair创建一个lp
+<ol>
+<li>对交易对排序</li>
+<li>通过UniswapV2Pair.createionCode来创建合约</li>
+<li>计算合约的地址</li>
+<li>调用创建的合约的initialize方法</li>
+<li><code>factory合约</code>保存交易对到getPair</li>
+<li><code>factory合约</code>保存创建的合约地址到allPairs</li>
+</ol>
+</li>
+<li>获取pair的余额（reserveA, reserveB)</li>
+<li>通过quote计算需要的数量
+<ol>
+<li>needB = giveA*reserveB/reserveA,</li>
+<li>如果needB小于giveB，则使用needB替代giveB</li>
+<li>如果needB大于giveB, 则计算 needA = giveB*reserveA/reserveB
+<ol>
+<li>如果needA小于giveA，则使用needA替换giveA，否则失败</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>获取tokenA/tokenB的LP的合约地址
+<ol>
+<li>这里是通过abi直接计算的，而不是通过调用方法，可以借鉴一下</li>
+</ol>
+</li>
+<li>将计算出来的tokenA的amount转到LP合约里</li>
+<li>将计算出来的tokenB的amount转到LP合约里</li>
+<li>调用LP合约的mint方法
+<ol>
+<li>获取LP当前的pool（reserve0，reserve1）</li>
+<li>获取LP的token0和token1 的余额</li>
+<li>用token的余额-pool的余额，计算amount0 和 amount1
+<ol>
+<li>PS：这里没有判断是不是由这个地址转进合约的，所以是不是存在一个可能，让其他人转币进去，然后我们自己调用mint，to填写自己的地址，这样就相当于我们的lp。但是必须在同一个交易里实现这个操作。</li>
+<li>PS：通过钓鱼或者flashloan去完成？可以看一下flashloan的代码，比如还款的时候调用一下</li>
+</ol>
+</li>
+<li>计算手续费 _mintFee
+<ol>
+<li>获取手续费地址</li>
+<li>获取Klast（klast=reserve0*reserver1）</li>
+<li>todo</li>
+</ol>
+</li>
+<li>获取totalSupply
+<ol>
+<li>如果是0
+<ol>
+<li>lp = sqrt(amount0*amount1).sub(10**3)</li>
+<li>_mint(address(0), 10**3)
+<ol>
+<li>记录balance和totalSupply</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>如果不是0
+<ol>
+<li>lp = min(amount0<em>totalSupply/reserve0, amount1</em>totalSupply/reserve1)</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>_mint(to, lp), 将lp转到to地址下</li>
+<li>_update更新
+<ol>
+<li>记录 blockTimestamp</li>
+<li>记录 reserve0</li>
+<li>记录 reserve1</li>
+<li>发送 sync事件 📧️</li>
+</ol>
+</li>
+<li>发送 mint事件 📧️</li>
+</ol>
+</li>
+</ol>
+<h3 id="removeliquidity">removeLiquidity</h3>
+<ul>
+<li>移除流动性</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint liquidity,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
+        address pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
+        IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        (uint amount0, uint amount1) = IUniswapV2Pair(pair).burn(to);
+        (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
+        (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+        require(amountA &gt;= amountAMin, &#39;UniswapV2Router: INSUFFICIENT_A_AMOUNT&#39;);
+        require(amountB &gt;= amountBMin, &#39;UniswapV2Router: INSUFFICIENT_B_AMOUNT&#39;);
+    }
+</code></pre></td></tr></table>
+</div>
+</div><p>流程说明</p>
+<ol>
+<li>获取lp的地址</li>
+<li>将liquidity转回pair</li>
+<li>调用pari的burn方法
+<ol>
+<li>获取reserve0, reserve1</li>
+<li>获取balance0, balance1</li>
+<li>获取当前地址的liquidity</li>
+<li>计算手续费 _mintFee</li>
+<li>amount0 = liquidity*balance0/totalSupply</li>
+<li>amount1 = liquidity*balance1/totalSupply</li>
+<li>_burn liquidity
+<ol>
+<li>totalSupply 减少, 然后address的balance减少</li>
+</ol>
+</li>
+<li>将token0 转到to</li>
+<li>将token1 转到to</li>
+<li>调用 _update方法更新reserve0 和 reserve1
+<ol>
+<li>发送 sync事件 📧️</li>
+</ol>
+</li>
+<li>发送 burn事件 📧️</li>
+</ol>
+</li>
+</ol>
+<h3 id="swapexacttokensfortokens">swapExactTokensForTokens</h3>
+<ul>
+<li>用A换B</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path, // 这里的path是tokenA和tokenB
+        address to,
+        uint deadline
+    ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
+        amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
+        require(amounts[amounts.length - 1] &gt;= amountOutMin, &#39;UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT&#39;);
+        TransferHelper.safeTransferFrom(
+            path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
+        );
+        _swap(amounts, path, to);
+    }
+</code></pre></td></tr></table>
+</div>
+</div><p>流程说明</p>
+<ol>
+<li>getAmountOut 计算可以换出多少币
+<ol>
+<li>获取 reserveIn, reserveOut
+<ol>
+<li>通过getAmount 计算兑换
+<ol>
+<li>fee是 3/1000</li>
+<li>不计算手续费的公式为 A<em>B = (A+a)</em>(B-x)， 简化一下就是 x=(B*a)/(A+a)</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>将币转到lp地址</li>
+<li>调用_swap方法
+<ol>
+<li>调用pair的swap方法
+<ol>
+<li>获取当前的reserve0 和 reserve1</li>
+<li>transfer token0</li>
+<li>transfer token1</li>
+<li>如果存在calldata，则调用calldata
+<ol>
+<li>PS：这里的calldata开启了flashloan的功能</li>
+</ol>
+</li>
+<li>重新更新 balance0Adjusted, balance1Adjusted</li>
+<li>_update
+<ol>
+<li>发送 sync事件 📧️</li>
+</ol>
+</li>
+<li>发送Swap事件 📧️</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+<h3 id="swaptokensforexacttokens">swapTokensForExactTokens</h3>
+<ul>
+<li>同上，用B换A</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-fallback" data-lang="fallback">function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
+        amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
+        require(amounts[0] &lt;= amountInMax, &#39;UniswapV2Router: EXCESSIVE_INPUT_AMOUNT&#39;);
+        TransferHelper.safeTransferFrom(
+            path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
+        );
+        _swap(amounts, path, to);
+    }
+</code></pre></td></tr></table>
+</div>
+</div><h2 id="总结">总结</h2>
+<p>Uniswap的代码还是史无前例的，特别是swap时的支持的call，是一种很hack的方法。</p>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">文章作者</span>
+    <span class="item-content">chuwt</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">上次更新</span>
+    <span class="item-content">
+        2021-12-17
+        
+    </span>
+  </p>
+  
+  
+</div>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/%E5%90%88%E7%BA%A6/">合约</a>
+          <a href="/tags/blockchain/">Blockchain</a>
+          <a href="/tags/solidity/">Solidity</a>
+          </div>
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/">
+            <span class="next-text nav-default">EVM运行原理</span>
+            <span class="next-text nav-mobile">下一篇</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:weitaochu@gmail.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/chuwt" class="iconfont icon-github" title="github"></a>
+  <a href="https://chuwt.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    由 <a class="hexo-link" href="https://gohugo.io">Hugo</a> 强力驱动
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    主题 - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>chuwt</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

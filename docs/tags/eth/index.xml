@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>ETH on chuwt&#39;s blog</title>
+    <title>eth on chuwt&#39;s blog</title>
     <link>https://chuwt.github.io/tags/eth/</link>
-    <description>Recent content in ETH on chuwt&#39;s blog</description>
+    <description>Recent content in eth on chuwt&#39;s blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 18 Oct 2021 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://chuwt.github.io/tags/eth/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Mon, 18 Oct 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://chuwt.github.io/tags/eth/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>EVM运行原理</title>
       <link>https://chuwt.github.io/post/evm%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/</link>
