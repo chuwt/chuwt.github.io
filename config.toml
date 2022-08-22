@@ -171,7 +171,7 @@ enable = false
 options = ""            # default: "{theme: 'simple'}"
 
 [params.busuanzi]         # count web traffic by busuanzi                             # 是否使用不蒜子统计站点访问量
-enable = true
+enable = false
 siteUV = true
 sitePV = true
 pagePV = true
